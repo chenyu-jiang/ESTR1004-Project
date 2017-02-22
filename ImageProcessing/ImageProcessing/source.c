@@ -1,15 +1,21 @@
 #include <stdio.h>
 #include "qdbmp.h"
 #include <math.h>
+#include <stdlib.h>
+#include <string.h>
 
-//#define DEBUG
+#define DEBUG
 // REGARDS TO http://qdbmp.sourceforge.net/
+
+#define PI 3.14159
+#define LOGE 2.71828
 
 void RGBtoBW(BMP* bmp);
 void invert(BMP* bmp);
 BMP* zoom(BMP* bmp, int k);
 void reduceLevel(BMP* bmp, int level);
 void BritandCntr(BMP* bmp, int brightness, double contrast);
+BMP* GaussianBlur(BMP* bmp,double theta,int radius);
 
 int main()
 {
@@ -19,13 +25,14 @@ int main()
 	BMP_CHECK_ERROR(stderr, -1);
 	/////////////////////////////////////////////////////////////////////////
 	//Your code in between
-	BritandCntr(bmp, 50,0.8);
+	BMP* newbmp = GaussianBlur(bmp,16,51);
 	/////////////////////////////////////////////////////////////////////////
 	/* Save result */
-	BMP_WriteFile(bmp, "myout.bmp");
+	BMP_WriteFile(newbmp, "myoutr51the16.bmp");
 	BMP_CHECK_ERROR(stderr, -2);
 	/* Free all memory allocated for the image */
 	BMP_Free(bmp);
+	BMP_Free(newbmp);
 	//BMP_Free(output);
 	return 0;
 }
@@ -152,4 +159,99 @@ void BritandCntr(BMP* bmp, int brightness,double contrast) //Brightness: amount 
 			BMP_CHECK_ERROR(stdout, -1);
 		}
 	}
+}
+
+double GaussFunction(double theta, int dimension, double* gaussmatrix)
+{
+	double sum = 0;
+	for (int i = 0; i < dimension; i++)
+	{
+		for (int j = 0; j < dimension; j++)
+		{
+			int x = i - (dimension - 1) / 2;
+			int y = j - (dimension - 1) / 2;
+			double gauss = 1.0 / (2 * PI*theta*theta)*pow(LOGE, 1.0*(-x*x - y*y) / (2 * theta*theta));
+			gaussmatrix[i*dimension + j] = gauss;
+			sum += gauss;
+		}
+	}
+	return sum;
+}
+
+
+BMP* GaussianBlur(BMP* bmp,double theta,int radius)
+{
+	double* gaussmatrix = malloc(sizeof(double)*radius*radius);
+	double sum=GaussFunction(theta, radius, gaussmatrix);
+#ifdef DEBUG
+	for (int i = 0; i < radius; i++)
+	{
+		for (int j = 0; j < radius; j++)
+		{
+			printf("%10.4lf", gaussmatrix[i*radius + j]);
+		}
+		printf("\n");
+	}
+#endif // DEBUG
+
+	UINT    width, height;
+	USHORT depth;
+	width = BMP_GetWidth(bmp);
+	height = BMP_GetHeight(bmp);
+	depth = BMP_GetDepth(bmp);
+	BMP* newbmp=BMP_Create(width, height, depth);
+	//Go through all pixels
+	for (UINT x = 0; x < width; x++)
+	{
+		for (UINT y = 0; y < height; y++)
+		{
+			//Fill in colors
+			double r = 0, g = 0, b = 0;
+			for (int i = 0; i < radius; i++)
+			{
+				for (int j = 0; j < radius; j++)
+				{
+					//Reflect boundary
+					int xi=x, yi=y;
+					if (xi - (radius - 1) / 2 + i < 0)
+					{
+						xi = -(xi - (radius - 1) / 2 + i);
+					}
+					else
+					{
+						xi = (xi - (radius - 1) / 2 + i);
+					}
+					if (yi - (radius - 1) / 2 + j < 0)
+					{
+						yi = -(yi - (radius - 1) / 2 + j);
+					}
+					else
+					{
+						yi = (yi - (radius - 1) / 2 + j);
+					}
+					if (xi >= width)
+					{
+						xi = width - (xi - width) - 1;
+					}
+					if (yi >= height)
+					{
+						yi = height - (yi - height) - 1;
+					}
+					UCHAR R, G, B;
+					BMP_GetPixelRGB(bmp, xi, yi, &R, &G, &B);
+					r += R*gaussmatrix[i*radius + j];
+					g += G*gaussmatrix[i*radius + j];
+					b += B*gaussmatrix[i*radius + j];
+				}
+			}
+
+			//Calculate total
+			r /= sum;
+			g /= sum;
+			b /= sum;
+			BMP_SetPixelRGB(newbmp, x, y, (UCHAR)r, (UCHAR)g, (UCHAR)b);
+		}
+	}
+	free(gaussmatrix);
+	return newbmp;
 }
