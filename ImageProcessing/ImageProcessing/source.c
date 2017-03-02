@@ -10,15 +10,6 @@
 #define PI 3.14159
 #define LOGE 2.71828
 
-typedef struct bmparray {
-	int height;
-	int width;
-	int *R;
-	int *G;
-	int *B;
-} Mybmp;
-
-
 void RGBtoBW(BMP* bmp);
 void invert(BMP* bmp);
 BMP* zoom(BMP* bmp, int k);
@@ -29,6 +20,7 @@ BMP* FastGaussianBlur(BMP* bmp, double theta, int radius);
 BMP* naiveRotate(double degrees, BMP* bmp);
 BMP* shearRotate(double degrees, BMP* bmp);
 BMP* shearRotateShell(double degrees, BMP* bmp);
+BMP* SobelEdgeDetection(BMP* bmp,int thrhld,int coefficient);
 
 int main()
 {
@@ -38,7 +30,7 @@ int main()
 	BMP_CHECK_ERROR(stderr, -1);
 	/////////////////////////////////////////////////////////////////////////
 	//Your code in between
-	BMP* newbmp = FastGaussianBlur(bmp, 3, 10);
+	SobelEdgeDetection(bmp,20,3);
 	/////////////////////////////////////////////////////////////////////////
 	/* Save result */
 /*#ifdef DEBUG
@@ -78,10 +70,10 @@ int main()
 	}
 #endif // !DEBUG
 */
-	BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Output\\newblurr10the3.bmp");
+	//BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Output\\newblurr10the3.bmp");
 	/* Free all memory allocated for the image */
 	BMP_Free(bmp);
-	BMP_Free(newbmp);
+	//BMP_Free(newbmp);
 	//BMP_Free(output);
 	return 0;
 }
@@ -775,4 +767,69 @@ BMP* shearRotateShell(double degrees, BMP* bmp)
 		tmp = shearRotate(degrees, bmp);
 	}
 	return tmp;
+}
+
+BMP* SobelEdgeDetection(BMP* bmp,int thrhld,int coefficient)
+{
+	int SobelY[3][3] = { {-1,0,1},{-2,0,2},{-1,0,1} };
+	int SobelX[3][3] = { {-1,-2,-1},{0,0,0},{1,2,1} };
+	//Convert to Greyscale
+	RGBtoBW(bmp);
+	BMP_WriteFile(bmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Output\\BW.bmp");
+	//Gaussian blur
+	BMP* tmpbmp = FastGaussianBlur(bmp, 1, 3);
+	BMP* swap = bmp;
+	bmp = tmpbmp;
+	tmpbmp = swap;
+	//BMP_Free(tmpbmp);
+	//Get basic information
+	UINT width, height;
+	USHORT depth;
+	width = BMP_GetWidth(bmp);
+	height = BMP_GetHeight(bmp);
+	depth = BMP_GetDepth(bmp);
+	int* EdgeX = malloc(sizeof(int)*height*width);
+	int* EdgeY = malloc(sizeof(int)*height*width);
+	memset(EdgeX, 0, sizeof(int)*height*width);
+	memset(EdgeY, 0, sizeof(int)*height*width);
+	//Convolve with Sobel matrix
+	for (int i = 1; i < width-1; i++)
+	{
+		for (int j = 1; j < height-1; j++)
+		{
+			int sumX = 0, sumY = 0;
+			//Calculate gradient
+			for (int iX= 0; iX < 3; iX++)
+			{
+				for (int iY = 0; iY < 3; iY++)
+				{
+					UCHAR value = 0;
+					BMP_GetPixelRGB(bmp, i + iX - 1, j + iY - 1, &value, &value, &value);
+					sumX += value*SobelX[iX][iY];
+					sumY += value*SobelY[iX][iY];
+				}
+			}
+			if (abs(sumX) > thrhld && abs(sumX) < 1020) EdgeX[i + j*width] = sumX;
+			if (abs(sumY) > thrhld && abs(sumY) < 1020) EdgeY[i + j*width] = sumY;
+		}
+	}
+	BMP* gradX = BMP_Create(width, height, depth);
+	BMP* gradY = BMP_Create(width, height, depth);
+	BMP* gradA = BMP_Create(width, height, depth);
+	for (int i = 0; i < width; i++)
+	{
+		for (int j = 0; j < height; j++)
+		{
+			int b = (int)sqrt(EdgeX[i + j*width] * EdgeX[i + j*width] + EdgeY[i + j*width] * EdgeY[i + j*width]);
+			BMP_SetPixelRGB(gradX, i, j, 128 + EdgeX[i + j*width]/coefficient, 128 + EdgeX[i + j*width]/ coefficient, 128 + EdgeX[i + j*width]/ coefficient);
+			BMP_SetPixelRGB(gradY, i, j, 128 + EdgeY[i + j*width]/ coefficient, 128 + EdgeY[i + j*width]/ coefficient, 128 + EdgeY[i + j*width]/ coefficient);
+			BMP_SetPixelRGB(gradA, i, j, b/ coefficient, b/ coefficient, b/ coefficient);
+		}
+	}
+	BMP_WriteFile(gradX, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Output\\gradX.bmp");
+	BMP_WriteFile(gradY, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Output\\gradY.bmp");
+	BMP_WriteFile(gradA, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Output\\gradA.bmp");
+	BMP_Free(gradX);
+	BMP_Free(gradY);
+	return gradA;
 }
