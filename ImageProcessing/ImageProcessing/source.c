@@ -21,19 +21,19 @@ BMP* naiveRotate(double degrees, BMP* bmp);
 BMP* shearRotate(double degrees, BMP* bmp);
 BMP* shearRotateShell(double degrees, BMP* bmp);
 BMP* SobelEdgeDetection(BMP* bmp,int thrhld,int coefficient);
+BMP* AMRotation(BMP* bmp, double theta);
 
 int main()
 {
 	BMP*    bmp;
-	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Lenna.bmp";
+	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\test1.bmp";
 	bmp = BMP_ReadFile(filename);
 	BMP_CHECK_ERROR(stderr, -1);
 	/////////////////////////////////////////////////////////////////////////
 	//Your code in between
-	SobelEdgeDetection(bmp,20,3);
 	/////////////////////////////////////////////////////////////////////////
 	/* Save result */
-/*#ifdef DEBUG
+#ifdef DEBUG
 	int i = 0;
 	double rad = 0.0174532925*i;
 	char filepath[100] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Output\\rotate";
@@ -45,7 +45,7 @@ int main()
 	filepath[len + 2] = 'm';
 	filepath[len + 3] = 'p';
 	filepath[len + 4] = 0;
-	BMP* newbmp = shearRotateShell(rad, bmp);
+	BMP* newbmp = AMRotation(bmp, rad);
 	BMP_WriteFile(newbmp, filepath);
 	BMP_Free(newbmp);
 	BMP_CHECK_ERROR(stderr, -2);
@@ -63,14 +63,13 @@ int main()
 		filepath[len + 2] = 'm';
 		filepath[len + 3] = 'p';
 		filepath[len + 4] = 0;
-		BMP* newbmp = shearRotateShell(rad, bmp);
+		BMP* newbmp = AMRotation(bmp, rad);
 		BMP_WriteFile(newbmp, filepath);
 		BMP_Free(newbmp);
 		BMP_CHECK_ERROR(stderr, -2);
 	}
 #endif // !DEBUG
-*/
-	//BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Output\\newblurr10the3.bmp");
+	//BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Output\\testrotate.bmp");
 	/* Free all memory allocated for the image */
 	BMP_Free(bmp);
 	//BMP_Free(newbmp);
@@ -832,4 +831,110 @@ BMP* SobelEdgeDetection(BMP* bmp,int thrhld,int coefficient)
 	BMP_Free(gradX);
 	BMP_Free(gradY);
 	return gradA;
+}
+
+double maximum(double a, double b, double c, double d)
+{
+	double par = a;
+	double var[3] = { b,c,d };
+	for (int i = 0; i < 3; i++)
+		par = (par > var[i]) ? par : var[i];
+	return par;
+}
+
+double minimum(double a, double b, double c, double d)
+{
+	double par = a;
+	double var[3] = { b,c,d };
+	for (int i = 0; i < 3; i++)
+		par = (par < var[i]) ? par : var[i];
+	return par;
+}
+
+double r_compute(double var_x, double var_y, BMP* bmp, double cost, double sint)
+{
+	UCHAR R[4] = { 0,0,0,0 };
+	UCHAR G[4] = { 0,0,0,0 };
+	UCHAR B[4] = { 0,0,0,0 };
+
+	BMP_GetPixelRGB(bmp, (unsigned long)var_x, (unsigned long)var_y, R, G, B);
+	BMP_GetPixelRGB(bmp, (unsigned long)var_x + 1, (unsigned long)var_y, R + 1, G + 1, B + 1);
+	BMP_GetPixelRGB(bmp, (unsigned long)var_x, (unsigned long)var_y + 1, R + 2, G + 2, B + 2);
+	BMP_GetPixelRGB(bmp, (unsigned long)var_x + 1, (unsigned long)var_y + 1, R + 3, G + 3, B + 3);
+
+	//Area average of the colors
+	return ((1 - var_x + (unsigned long)var_x)*(1 - var_y + (unsigned long)var_y)*R[0] + (var_x - (unsigned long)var_x)*(1 - var_y + (unsigned long)var_y)*R[1] + (1 - var_x + (unsigned long)var_x)*(var_y - (unsigned long)var_y)*R[2] + (var_x - (unsigned long)var_x)*(var_y - (unsigned long)var_y)*R[3]);
+}
+
+double g_compute(double var_x, double var_y, BMP* bmp, double cost, double sint)
+{
+	UCHAR R[4] = { 0,0,0,0 };
+	UCHAR G[4] = { 0,0,0,0 };
+	UCHAR B[4] = { 0,0,0,0 };
+
+	BMP_GetPixelRGB(bmp, (unsigned long)var_x, (unsigned long)var_y, R, G, B);
+	BMP_GetPixelRGB(bmp, (unsigned long)var_x + 1, (unsigned long)var_y, R + 1, G + 1, B + 1);
+	BMP_GetPixelRGB(bmp, (unsigned long)var_x, (unsigned long)var_y + 1, R + 2, G + 2, B + 2);
+	BMP_GetPixelRGB(bmp, (unsigned long)var_x + 1, (unsigned long)var_y + 1, R + 3, G + 3, B + 3);
+
+	//Area average of the colors
+	return ((1 - var_x + (unsigned long)var_x)*(1 - var_y + (unsigned long)var_y)*G[0] + (var_x - (unsigned long)var_x)*(1 - var_y + (unsigned long)var_y)*G[1] + (1 - var_x + (unsigned long)var_x)*(var_y - (unsigned long)var_y)*G[2] + (var_x - (unsigned long)var_x)*(var_y - (unsigned long)var_y)*G[3]);
+}
+
+double b_compute(double var_x, double var_y, BMP* bmp, double cost, double sint)
+{
+	UCHAR R[4] = { 0,0,0,0 };
+	UCHAR G[4] = { 0,0,0,0 };
+	UCHAR B[4] = { 0,0,0,0 };
+
+	BMP_GetPixelRGB(bmp, (unsigned long)var_x, (unsigned long)var_y, R, G, B);
+	BMP_GetPixelRGB(bmp, (unsigned long)var_x + 1, (unsigned long)var_y, R + 1, G + 1, B + 1);
+	BMP_GetPixelRGB(bmp, (unsigned long)var_x, (unsigned long)var_y + 1, R + 2, G + 2, B + 2);
+	BMP_GetPixelRGB(bmp, (unsigned long)var_x + 1, (unsigned long)var_y + 1, R + 3, G + 3, B + 3);
+
+	//Area average of the colors
+	return ((1 - var_x + (unsigned long)var_x)*(1 - var_y + (unsigned long)var_y)*B[0] + (var_x - (unsigned long)var_x)*(1 - var_y + (unsigned long)var_y)*B[1] + (1 - var_x + (unsigned long)var_x)*(var_y - (unsigned long)var_y)*B[2] + (var_x - (unsigned long)var_x)*(var_y - (unsigned long)var_y)*B[3]);
+}
+
+BMP* AMRotation(BMP* bmp, double theta)
+{
+	//Compute some important coefficient
+	double cost = cos(theta);
+	double sint = sin(theta);
+	double pre_width = BMP_GetWidth(bmp);
+	double pre_height = BMP_GetHeight(bmp);
+	double depth = BMP_GetDepth(bmp);
+
+	//Analysing size of new picture;
+	double max_x = maximum((pre_width*cost - pre_height*sint), -pre_height*sint, 0.1 * 0, pre_width*cost);
+	double min_x = minimum((pre_width*cost - pre_height*sint), -pre_height*sint, 0.1 * 0, pre_width*cost);
+	double max_y = maximum((pre_width*sint + pre_height*cost), pre_height*cost, 0.1 * 0, pre_width*sint);
+	double min_y = minimum((pre_width*sint + pre_height*cost), pre_height*cost, 0.1 * 0, pre_width*sint);
+	double width = max_x - min_x;
+	double height = max_y - min_y;
+
+	BMP* newbmp = BMP_Create(width, height, depth);
+
+	//x`=Ax + (-minx,-miny);
+	for (UINT x = 0; x < width; x++)
+	{
+		for (UINT y = 0; y < height; y++)
+		{
+			double r = 0, g = 0, b = 0;
+
+			//Compute original coordinate in newbmp system
+			double pre_x = cost*(x + min_x) + sint*(y + min_y);
+			double pre_y = -sint*(x + min_x) + cost*(y + min_y);
+
+			if ((pre_x > 0 && pre_x < pre_width) && (pre_y > 0 && pre_y < pre_height))
+			{
+				r = r_compute(pre_x, pre_y, bmp, cost, sint);
+				g = g_compute(pre_x, pre_y, bmp, cost, sint);
+				b = b_compute(pre_x, pre_y, bmp, cost, sint);
+			}
+			BMP_SetPixelRGB(newbmp, x, y, (UCHAR)r, (UCHAR)g, (UCHAR)b);
+		}
+	}
+
+	return newbmp;
 }
