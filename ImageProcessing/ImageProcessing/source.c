@@ -26,50 +26,15 @@ BMP* AMRotation(BMP* bmp, double theta);
 int main()
 {
 	BMP*    bmp;
-	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\test1.bmp";
+	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\lenna.bmp";
 	bmp = BMP_ReadFile(filename);
 	BMP_CHECK_ERROR(stderr, -1);
 	/////////////////////////////////////////////////////////////////////////
 	//Your code in between
+	SobelEdgeDetection(bmp, 50, 4);
 	/////////////////////////////////////////////////////////////////////////
 	/* Save result */
-#ifdef DEBUG
-	int i = 0;
-	double rad = 0.0174532925*i;
-	char filepath[100] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Output\\rotate";
-	int len = strlen(filepath);
-	itoa(i, filepath + len, 10);
-	len = strlen(filepath);
-	filepath[len] = '.';
-	filepath[len + 1] = 'b';
-	filepath[len + 2] = 'm';
-	filepath[len + 3] = 'p';
-	filepath[len + 4] = 0;
-	BMP* newbmp = AMRotation(bmp, rad);
-	BMP_WriteFile(newbmp, filepath);
-	BMP_Free(newbmp);
-	BMP_CHECK_ERROR(stderr, -2);
-#endif // DEBUG
-#ifndef DEBUG
-	for (int i = 5; i < 360; i += 5)
-	{
-		double rad = 0.0174532925*i;
-		char filepath[100] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Output\\rotate";
-		int len = strlen(filepath);
-		itoa(i, filepath + len, 10);
-		len = strlen(filepath);
-		filepath[len] = '.';
-		filepath[len + 1] = 'b';
-		filepath[len + 2] = 'm';
-		filepath[len + 3] = 'p';
-		filepath[len + 4] = 0;
-		BMP* newbmp = AMRotation(bmp, rad);
-		BMP_WriteFile(newbmp, filepath);
-		BMP_Free(newbmp);
-		BMP_CHECK_ERROR(stderr, -2);
-	}
-#endif // !DEBUG
-	//BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Output\\testrotate.bmp");
+	//BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\debug.bmp");
 	/* Free all memory allocated for the image */
 	BMP_Free(bmp);
 	//BMP_Free(newbmp);
@@ -303,7 +268,7 @@ BMP* FastGaussianBlur(BMP* bmp, double theta, int radius)
 	sum = 0;
 	for (int i = 0; i < radius; i++)
 	{
-		sum += gaussmatrix[i + radius*radius / 2];
+		sum += gaussmatrix[i + radius*(radius / 2)];
 	}
 #ifdef DEBUG
 	for (int i = 0; i < radius; i++)
@@ -774,12 +739,13 @@ BMP* SobelEdgeDetection(BMP* bmp,int thrhld,int coefficient)
 	int SobelX[3][3] = { {-1,-2,-1},{0,0,0},{1,2,1} };
 	//Convert to Greyscale
 	RGBtoBW(bmp);
-	BMP_WriteFile(bmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Output\\BW.bmp");
+	BMP_WriteFile(bmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\BW.bmp");
 	//Gaussian blur
 	BMP* tmpbmp = FastGaussianBlur(bmp, 1, 3);
 	BMP* swap = bmp;
 	bmp = tmpbmp;
 	tmpbmp = swap;
+	BMP_WriteFile(bmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\Blur.bmp");
 	//BMP_Free(tmpbmp);
 	//Get basic information
 	UINT width, height;
@@ -802,10 +768,10 @@ BMP* SobelEdgeDetection(BMP* bmp,int thrhld,int coefficient)
 			{
 				for (int iY = 0; iY < 3; iY++)
 				{
-					UCHAR value = 0;
-					BMP_GetPixelRGB(bmp, i + iX - 1, j + iY - 1, &value, &value, &value);
-					sumX += value*SobelX[iX][iY];
-					sumY += value*SobelY[iX][iY];
+					UCHAR r = 0, g = 0, b = 0;
+					BMP_GetPixelRGB(bmp, i + iX - 1, j + iY - 1, &r, &g, &b);
+					sumX += r*SobelX[iX][iY];
+					sumY += r*SobelY[iX][iY];
 				}
 			}
 			if (abs(sumX) > thrhld && abs(sumX) < 1020) EdgeX[i + j*width] = sumX;
@@ -825,9 +791,9 @@ BMP* SobelEdgeDetection(BMP* bmp,int thrhld,int coefficient)
 			BMP_SetPixelRGB(gradA, i, j, b/ coefficient, b/ coefficient, b/ coefficient);
 		}
 	}
-	BMP_WriteFile(gradX, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Output\\gradX.bmp");
-	BMP_WriteFile(gradY, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Output\\gradY.bmp");
-	BMP_WriteFile(gradA, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Output\\gradA.bmp");
+	BMP_WriteFile(gradX, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\gradX.bmp");
+	BMP_WriteFile(gradY, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\gradY.bmp");
+	BMP_WriteFile(gradA, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\gradA.bmp");
 	BMP_Free(gradX);
 	BMP_Free(gradY);
 	return gradA;
