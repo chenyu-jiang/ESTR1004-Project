@@ -22,22 +22,23 @@ BMP* shearRotate(double degrees, BMP* bmp);
 BMP* shearRotateShell(double degrees, BMP* bmp);
 BMP* SobelEdgeDetection(BMP* bmp,int thrhld,int coefficient);
 BMP* AMRotation(BMP* bmp, double theta);
+BMP* CannyEdgeDetection(BMP* bmp, int thrhld, int coefficient);
 
 int main()
 {
 	BMP*    bmp;
-	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\lenna.bmp";
+	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\test.bmp";
 	bmp = BMP_ReadFile(filename);
 	BMP_CHECK_ERROR(stderr, -1);
 	/////////////////////////////////////////////////////////////////////////
 	//Your code in between
-	SobelEdgeDetection(bmp, 50, 4);
+	BMP* newbmp = CannyEdgeDetection(bmp, 80, 2);
 	/////////////////////////////////////////////////////////////////////////
 	/* Save result */
 	//BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\debug.bmp");
 	/* Free all memory allocated for the image */
 	BMP_Free(bmp);
-	//BMP_Free(newbmp);
+	BMP_Free(newbmp);
 	//BMP_Free(output);
 	return 0;
 }
@@ -797,6 +798,182 @@ BMP* SobelEdgeDetection(BMP* bmp,int thrhld,int coefficient)
 	BMP_Free(gradX);
 	BMP_Free(gradY);
 	return gradA;
+}
+
+BMP* CannyEdgeDetection(BMP* bmp, int thrhld, int coefficient)
+{
+	int SobelX[3][3] = { { -1,0,1 },{ -2,0,2 },{ -1,0,1 } };
+	int SobelY[3][3] = { { -1,-2,-1 },{ 0,0,0 },{ 1,2,1 } };
+	//Convert to Greyscale
+	RGBtoBW(bmp);
+	//BMP_WriteFile(bmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\BW.bmp");
+	//Gaussian blur
+	BMP* tmpbmp = FastGaussianBlur(bmp, 1, 3);
+	BMP* swap = bmp;
+	bmp = tmpbmp;
+	tmpbmp = swap;
+	//BMP_WriteFile(bmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\Blur.bmp");
+	//BMP_Free(tmpbmp);
+	//Get basic information
+	UINT width, height;
+	USHORT depth;
+	width = BMP_GetWidth(bmp);
+	height = BMP_GetHeight(bmp);
+	depth = BMP_GetDepth(bmp);
+	int* EdgeX = malloc(sizeof(int)*height*width);
+	int* EdgeY = malloc(sizeof(int)*height*width);
+	int* Direc = malloc(sizeof(int)*height*width);
+	int* GradA = malloc(sizeof(int)*height*width);
+	memset(EdgeX, 0, sizeof(int)*height*width);
+	memset(EdgeY, 0, sizeof(int)*height*width);
+	memset(Direc, -1, sizeof(int)*height*width);
+	memset(GradA, 0, sizeof(int)*height*width);
+	BMP* Canny = BMP_Create(width, height, depth);
+	//Convolve with Sobel matrix
+	for (int i = 1; i < width - 1; i++)
+	{
+		for (int j = 1; j < height - 1; j++)
+		{
+			int sumX = 0, sumY = 0;
+			//Calculate gradient
+			for (int iX = 0; iX < 3; iX++)
+			{
+				for (int iY = 0; iY < 3; iY++)
+				{
+					UCHAR r = 0, g = 0, b = 0;
+					BMP_GetPixelRGB(bmp, i + iY - 1, j + iX - 1, &r, &g, &b);
+					sumX += r*SobelX[iX][iY];
+					sumY += r*SobelY[iX][iY];
+				}
+			}
+			if (abs(sumX) > thrhld && abs(sumX) < 1020) EdgeX[i + j*width] = sumX;
+			if (abs(sumY) > thrhld && abs(sumY) < 1020) EdgeY[i + j*width] = sumY;
+			GradA[i + j*width] = sqrt(EdgeX[i + j*width] * EdgeX[i + j*width] + EdgeY[i + j*width] * EdgeY[i + j*width]);
+			double theta = 0;
+			if (GradA[i + j*width] != 0)
+			{
+				theta = atan2(EdgeY[i + j*width], EdgeX[i + j*width]);
+				//Angle rounding ( long code here )
+				{
+					if (theta < PI / 8 && theta >= -PI / 8)
+					{
+						Direc[i + j*width] = 0; // 0 for East
+					}
+					else
+					{
+						if (theta >= PI / 8 && theta < PI * 3 / 8)
+						{
+							Direc[i + j*width] = 1;// 1 for North-East
+						}
+						else
+						{
+							if (theta >= PI * 3 / 8 && theta < PI * 5 / 8)
+							{
+								Direc[i + j*width] = 2;// 2 for North
+							}
+							else
+							{
+								if (theta >= PI * 5 / 8 && theta < PI * 7 / 8)
+								{
+									Direc[i + j*width] = 3;// 3 for North-West
+								}
+								else
+								{
+									if (theta >= PI * 7 / 8 || theta < -PI * 7 / 8)
+									{
+										Direc[i + j*width] = 4;// 4 for West
+									}
+									else
+									{
+										if (theta >= -PI * 7 / 8 && theta < -PI * 5 / 8)
+										{
+											Direc[i + j*width] = 5;// 5 for South-West
+										}
+										else
+										{
+											if (theta >= -PI * 5 / 8 && theta < -PI * 3 / 8)
+											{
+												Direc[i + j*width] = 6;// 6 for South
+											}
+											else
+											{
+												if (theta >= -PI * 3 / 8 && theta < -PI * 1 / 8)
+												{
+													Direc[i + j*width] = 7;// 7 for South-East
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			//
+			//printf("%3d", Direc[i + j*width]);
+		}
+	//	printf("\n");
+	}
+	// Second Iteration
+	for (int i = 1; i < width-1; i++)
+	{
+		for (int j = 0; j < height-1; j++)
+		{
+			if (Direc[i + j*width] != -1)
+			{
+				//check neibours
+				if (Direc[i + j*width] == 0 || Direc[i + j*width] == 4)
+				{
+					if (GradA[i + j*width] > GradA[i + 1 + j*width] && GradA[i + j*width] > GradA[i - 1 + j*width] && GradA[i + j*width] != 0)
+					{
+						BMP_SetPixelRGB(Canny, i, j, (UCHAR)(GradA[i + j*width] / coefficient), (UCHAR)(GradA[i + j*width] / coefficient), (UCHAR)(GradA[i + j*width] / coefficient));
+					}
+				}
+				else
+				{
+					if (Direc[Direc[i + j*width] == 1 || Direc[i + j*width] == 5])
+					{
+						if (GradA[i + j*width] > GradA[i + 1 + (j - 1)*width] && GradA[i + j*width] > GradA[i - 1 + (j + 1)*width] && GradA[i + j*width] != 0)
+						{
+							BMP_SetPixelRGB(Canny, i, j, (UCHAR)(GradA[i + j*width] / coefficient), (UCHAR)(GradA[i + j*width] / coefficient), (UCHAR)(GradA[i + j*width] / coefficient));
+						}
+					}
+					else
+					{
+						if (Direc[Direc[i + j*width] == 2 || Direc[i + j*width] == 6])
+						{
+							if (GradA[i + j*width] > GradA[i + (j + 1)*width] && GradA[i + j*width] > GradA[i + (j - 1)*width] && GradA[i + j*width] != 0)
+							{
+								BMP_SetPixelRGB(Canny, i, j, (UCHAR)(GradA[i + j*width] / coefficient), (UCHAR)(GradA[i + j*width] / coefficient), (UCHAR)(GradA[i + j*width] / coefficient));
+							}
+						}
+						else
+						{
+							if (Direc[Direc[i + j*width] == 3 || Direc[i + j*width] == 7])
+							{
+								if (GradA[i + j*width] > GradA[i - 1 + (j - 1)*width] && GradA[i + j*width] > GradA[i + 1 + (j + 1)*width] && GradA[i + j*width] != 0)
+								{
+									BMP_SetPixelRGB(Canny, i, j, (UCHAR)(GradA[i + j*width] / coefficient), (UCHAR)(GradA[i + j*width] / coefficient), (UCHAR)(GradA[i + j*width] / coefficient));
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	free(GradA);
+	free(Direc);
+	free(EdgeX);
+	free(EdgeY);
+	BMP_WriteFile(Canny, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\Canny.bmp");
+	return Canny;
+}
+
+BMP* DoubleThreshold(BMP* bmp, int high, int low)
+{
+	//  TO BE COMPLETED
 }
 
 double maximum(double a, double b, double c, double d)
