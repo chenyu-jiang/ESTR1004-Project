@@ -22,23 +22,67 @@ BMP* shearRotate(double degrees, BMP* bmp);
 BMP* shearRotateShell(double degrees, BMP* bmp);
 BMP* SobelEdgeDetection(BMP* bmp,int thrhld,int coefficient);
 BMP* AMRotation(BMP* bmp, double theta);
-BMP* CannyEdgeDetection(BMP* bmp, int thrhld, int coefficient);
+BMP* CannyEdgeDetection(BMP* bmp, int thrhld, int coefficient, double highShr, double lowShr,int radius);
+BMP* DoubleThreshold(BMP* bmp, double high, double low,int radius);
+int* EgdeConnection(int* img, int width, int height,int radius);
+int* IsConnected(int* img, int width, int height, int x, int y,int radius);
 
 int main()
 {
 	BMP*    bmp;
-	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\test.bmp";
+	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\jaggi.bmp";
 	bmp = BMP_ReadFile(filename);
 	BMP_CHECK_ERROR(stderr, -1);
 	/////////////////////////////////////////////////////////////////////////
 	//Your code in between
-	BMP* newbmp = CannyEdgeDetection(bmp, 80, 2);
+	double high = 0.8;
+	double low = 0.4;
+	int radius = 6;
+	char filepath[100] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\CannyC\\";
+	int len = strlen(filepath);
+	filepath[len] = 'C';
+	filepath[len + 1] = 'H';
+	itoa((int)(10 * high), filepath + len + 2, 10);
+	len = strlen(filepath);
+	filepath[len] = 'L';
+	itoa((int)(10 * low), filepath + len + 1, 10);
+	len = strlen(filepath);
+	filepath[len] = '.';
+	filepath[len + 1] = 'b';
+	filepath[len + 2] = 'm';
+	filepath[len + 3] = 'p';
+	filepath[len + 4] = 0;
+	BMP* newbmp = CannyEdgeDetection(bmp, 20, 2, high, low, radius);
+	BMP_WriteFile(newbmp, filepath);
+	BMP_Free(newbmp);
 	/////////////////////////////////////////////////////////////////////////
 	/* Save result */
-	//BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\debug.bmp");
+	/*for (double i = 0.1; i <= 0.9; i+=0.1)
+	{
+		for (double j = i; j <= 0.9; j+=0.1)
+		{
+			char filepath[100]= "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\CannyC\\";
+			int len = strlen(filepath);
+			filepath[len] = 'C';
+			filepath[len + 1] = 'H';
+			itoa((int)(10 * j), filepath + len + 2, 10);
+			len = strlen(filepath);
+			filepath[len] = 'L';
+			itoa((int)(10 * i), filepath + len + 1, 10);
+			len = strlen(filepath);
+			filepath[len] = '.';
+			filepath[len + 1] = 'b';
+			filepath[len + 2] = 'm';
+			filepath[len + 3] = 'p';
+			filepath[len + 4] = 0;
+			BMP* newbmp = CannyEdgeDetection(bmp, 50, 2, j, i);
+			BMP_WriteFile(newbmp, filepath);
+			BMP_Free(newbmp);
+		}
+	}*/
 	/* Free all memory allocated for the image */
 	BMP_Free(bmp);
-	BMP_Free(newbmp);
+
 	//BMP_Free(output);
 	return 0;
 }
@@ -800,7 +844,7 @@ BMP* SobelEdgeDetection(BMP* bmp,int thrhld,int coefficient)
 	return gradA;
 }
 
-BMP* CannyEdgeDetection(BMP* bmp, int thrhld, int coefficient)
+BMP* CannyEdgeDetection(BMP* bmp, int thrhld, int coefficient,double highShr,double lowShr,int radius)
 {
 	int SobelX[3][3] = { { -1,0,1 },{ -2,0,2 },{ -1,0,1 } };
 	int SobelY[3][3] = { { -1,-2,-1 },{ 0,0,0 },{ 1,2,1 } };
@@ -967,13 +1011,190 @@ BMP* CannyEdgeDetection(BMP* bmp, int thrhld, int coefficient)
 	free(Direc);
 	free(EdgeX);
 	free(EdgeY);
-	BMP_WriteFile(Canny, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\Canny.bmp");
+	Canny = DoubleThreshold(Canny, highShr, lowShr,radius);
+	//BMP_WriteFile(Canny, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\Canny.bmp");
 	return Canny;
 }
 
-BMP* DoubleThreshold(BMP* bmp, int high, int low)
+BMP* DoubleThreshold(BMP* bmp, double high, double low,int radius)
 {
-	//  TO BE COMPLETED
+	//CONSTANTS
+	double HighShrRate = high;
+	double LowShrRate = low;
+	//  Generate histogram
+	UINT width, height;
+	USHORT depth;
+	width = BMP_GetWidth(bmp);
+	height = BMP_GetHeight(bmp);
+	depth = BMP_GetDepth(bmp);
+	int* image = malloc(sizeof(int)*height*width);
+	memset(image, -1, sizeof(int)*height*width);
+	int histogram[256] = { 0 };
+	int maxHeight = 0;
+	int totalPixel = 0;
+	for (int i = 0; i < width; i++)
+	{
+		for (int j = 0; j < height; j++)
+		{
+			UCHAR r = 0, g = 0, b = 0;
+			BMP_GetPixelRGB(bmp, i, j, &r, &g, &b);
+			if (r != 0)
+			{
+				histogram[r]++;
+				if (histogram[r] > maxHeight) maxHeight = histogram[r];
+				totalPixel++;
+			}
+		}
+	}
+	//Write the histogram to file
+	/*BMP* histoBMP = BMP_Create(256, (UINT)(maxHeight*1.2), depth);
+	for (int i = 0; i < 256; i++)
+	{
+		for (int j = 0; j < (UINT)(maxHeight*1.2); j++)
+		{
+			if (j <= histogram[i]) BMP_SetPixelRGB(histoBMP, i, (UINT)(maxHeight*1.2) - 1 - j, i, i, i);
+		}
+	}
+	BMP_WriteFile(histoBMP, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\Histo.bmp");
+	BMP_Free(histoBMP);
+	*/
+	//Calculate shreshold according to the histogram
+	int countPixel = 0;
+	int maxPix = (int)(totalPixel*(1 - HighShrRate));
+	int minPix = (int)(totalPixel*(1 - LowShrRate));
+	int maxVal = 0;
+	int minVal = 0;
+	int maxflag = 0, minflag = 0;
+	for (int i = 255; i > 0; i--)
+	{
+		countPixel += histogram[i];
+		if (countPixel > maxPix && maxflag == 0)
+		{
+			maxVal = i;
+			maxflag = 1;
+		}
+		if (countPixel > minPix && minflag == 0)
+		{
+			minVal = i;
+			minflag = 1;
+		}
+		if (minflag == 1 && maxflag == 1) break;
+	}
+	printf("totoal pixel= %d\nmax= %d\nmin= %d\n",totalPixel, maxVal, minVal); // DEBUG
+	//Double Shreshold
+	for (int i = 0; i < width; i++)
+	{
+		for (int j = 0; j < height; j++)
+		{
+			UCHAR r, g, b;
+			BMP_GetPixelRGB(bmp, i, j, &r, &g, &b);
+			if (r == 0) continue;
+			if (r >= maxVal)
+			{
+				image[i + j*width] = 2; // 2 for marked edge
+			}
+			else
+			{
+				if (r <= minVal)
+				{
+					image[i + j*width] = 1; // 1 for marked noise
+				}
+				else
+				{
+					image[i + j*width] = 0; // 0 for marked as between
+				}
+			}
+		}
+	}
+	///////////////////////////D//E//B//U//G//////////////////////////////
+	/*for (int i = 0; i < height; i++)
+	{
+		for (int j = 0; j < width; j++)
+		{
+			printf("%3d", image[i*width + j]);
+		}
+		printf("\n");
+	}*/
+	//////////////////////////////////////////////////////////////////////
+	//Judge Connectivity
+	EgdeConnection(image, width, height, radius);
+	//Write BMP
+	for (int i = 0; i < width; i++)
+	{
+		for (int j = 0; j < height; j++)
+		{
+			if (image[i + j*width] != 2)
+			{
+				BMP_SetPixelRGB(bmp, i, j, 0, 0, 0);
+			}
+			else
+			{
+				if (image[i + j*width] == 2) BMP_SetPixelRGB(bmp, i, j, 255, 255, 255);
+			}
+		}
+	}
+	return bmp;
+}
+
+int* EgdeConnection(int* img, int width, int height,int radius)
+{
+	for (int i = 0; i < width; i++)
+	{
+		for (int j = 0; j < height; j++)
+		{
+			if (img[i + j*width] == 0)
+			{
+				IsConnected(img, width, height, i, j, radius);
+			}
+		}
+	}
+	/////////////////////////////D//E//B//U//G////////////////////////////////
+	/*printf("\n\n");
+	for (int i = 0; i < height; i++)
+	{
+		for (int j = 0; j < width; j++)
+		{
+			printf("%3d", img[i*width + j]);
+		}
+		printf("\n");
+	}*/
+	/////////////////////////////////////////////////////////////////////////
+	return img;
+}
+
+int* IsConnected(int* img, int width, int height, int x, int y,int radius)
+{
+	img[x + y*width] = 3; // 3 for marked temporaryly
+	for (int i = 0; i < radius; i++)
+	{
+		for (int j = 0; j < radius; j++)
+		{
+			if (!(x - (radius / 2) +i + (y - (radius / 2) + j)*width >= 0 && x - (radius / 2) + i + (y - (radius / 2) + j)*width < height*width)) continue;
+			if (img[x - (radius / 2) + i + (y - (radius / 2) + j)*width] == 2)
+			{
+				img[x + y*width] = 2;
+				return img;
+			}
+		}
+	}
+	for (int i = 0; i < radius; i++)
+	{
+		for (int j = 0; j < radius; j++)
+		{
+			if (!(x - (radius / 2) + i + (y - (radius / 2) + j)*width >= 0 && x - (radius / 2) + i + (y - (radius / 2) + j)*width < height*width)) continue;
+			if (img[x - (radius / 2) + i + (y - (radius / 2) + j)*width] == 0)
+			{
+				img = IsConnected(img, width, height, x - (radius / 2) + i, y - (radius / 2) + j,radius);
+			}
+			if (img[x - (radius / 2) + i + (y - (radius / 2) + j)*width] == 2)
+			{
+				img[x + y*width] = 2;
+				return img;
+			}
+		}
+	}
+	img[x + y*width] = 1;
+	return img;
 }
 
 double maximum(double a, double b, double c, double d)
@@ -1046,7 +1267,7 @@ BMP* AMRotation(BMP* bmp, double theta)
 	double sint = sin(theta);
 	double pre_width = BMP_GetWidth(bmp);
 	double pre_height = BMP_GetHeight(bmp);
-	double depth = BMP_GetDepth(bmp);
+	USHORT depth = BMP_GetDepth(bmp);
 
 	//Analysing size of new picture;
 	double max_x = maximum((pre_width*cost - pre_height*sint), -pre_height*sint, 0.1 * 0, pre_width*cost);
