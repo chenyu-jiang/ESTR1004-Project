@@ -20,39 +20,24 @@ BMP* FastGaussianBlur(BMP* bmp, double theta, int radius);
 BMP* naiveRotate(double degrees, BMP* bmp);
 BMP* shearRotate(double degrees, BMP* bmp);
 BMP* shearRotateShell(double degrees, BMP* bmp);
-BMP* SobelEdgeDetection(BMP* bmp,int thrhld,int coefficient);
+BMP* SobelEdgeDetection(BMP* bmp, int thrhld, int coefficient);
 BMP* AMRotation(BMP* bmp, double theta);
-BMP* CannyEdgeDetection(BMP* bmp, int thrhld, int coefficient, double highShr, double lowShr,int radius);
-BMP* DoubleThreshold(BMP* bmp, double high, double low,int radius);
-int* EgdeConnection(int* img, int width, int height,int radius);
-int* IsConnected(int* img, int width, int height, int x, int y,int radius);
+BMP* CannyEdgeDetection(BMP* bmp, int thrhld, int coefficient, double highShr, double lowShr, int radius);
+BMP* DoubleThreshold(BMP* bmp, double high, double low, int radius);
+int* EgdeConnection(int* img, int width, int height, int radius);
+int* IsConnected(int* img, int width, int height, int x, int y, int radius);
+BMP* DINTRotation(BMP* bmp, double theta);
 
 int main()
 {
 	BMP*    bmp;
-	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\jaggi.bmp";
+	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\test.bmp";
 	bmp = BMP_ReadFile(filename);
 	BMP_CHECK_ERROR(stderr, -1);
 	/////////////////////////////////////////////////////////////////////////
 	//Your code in between
-	double high = 0.8;
-	double low = 0.4;
-	int radius = 6;
-	char filepath[100] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\CannyC\\";
-	int len = strlen(filepath);
-	filepath[len] = 'C';
-	filepath[len + 1] = 'H';
-	itoa((int)(10 * high), filepath + len + 2, 10);
-	len = strlen(filepath);
-	filepath[len] = 'L';
-	itoa((int)(10 * low), filepath + len + 1, 10);
-	len = strlen(filepath);
-	filepath[len] = '.';
-	filepath[len + 1] = 'b';
-	filepath[len + 2] = 'm';
-	filepath[len + 3] = 'p';
-	filepath[len + 4] = 0;
-	BMP* newbmp = CannyEdgeDetection(bmp, 20, 2, high, low, radius);
+	char filepath[100] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\INTR\\rotate.bmp";
+	BMP* newbmp = DINTRotation(bmp, 30);
 	BMP_WriteFile(newbmp, filepath);
 	BMP_Free(newbmp);
 	/////////////////////////////////////////////////////////////////////////
@@ -227,7 +212,6 @@ double GaussFunction(double theta, int dimension, double* gaussmatrix)
 	}
 	return sum;
 }
-
 
 BMP* NaiveGaussianBlur(BMP* bmp, double theta, int radius)
 {
@@ -778,7 +762,7 @@ BMP* shearRotateShell(double degrees, BMP* bmp)
 	return tmp;
 }
 
-BMP* SobelEdgeDetection(BMP* bmp,int thrhld,int coefficient)
+BMP* SobelEdgeDetection(BMP* bmp, int thrhld, int coefficient)
 {
 	int SobelY[3][3] = { {-1,0,1},{-2,0,2},{-1,0,1} };
 	int SobelX[3][3] = { {-1,-2,-1},{0,0,0},{1,2,1} };
@@ -803,13 +787,13 @@ BMP* SobelEdgeDetection(BMP* bmp,int thrhld,int coefficient)
 	memset(EdgeX, 0, sizeof(int)*height*width);
 	memset(EdgeY, 0, sizeof(int)*height*width);
 	//Convolve with Sobel matrix
-	for (int i = 1; i < width-1; i++)
+	for (int i = 1; i < width - 1; i++)
 	{
-		for (int j = 1; j < height-1; j++)
+		for (int j = 1; j < height - 1; j++)
 		{
 			int sumX = 0, sumY = 0;
 			//Calculate gradient
-			for (int iX= 0; iX < 3; iX++)
+			for (int iX = 0; iX < 3; iX++)
 			{
 				for (int iY = 0; iY < 3; iY++)
 				{
@@ -831,9 +815,9 @@ BMP* SobelEdgeDetection(BMP* bmp,int thrhld,int coefficient)
 		for (int j = 0; j < height; j++)
 		{
 			int b = (int)sqrt(EdgeX[i + j*width] * EdgeX[i + j*width] + EdgeY[i + j*width] * EdgeY[i + j*width]);
-			BMP_SetPixelRGB(gradX, i, j, 128 + EdgeX[i + j*width]/coefficient, 128 + EdgeX[i + j*width]/ coefficient, 128 + EdgeX[i + j*width]/ coefficient);
-			BMP_SetPixelRGB(gradY, i, j, 128 + EdgeY[i + j*width]/ coefficient, 128 + EdgeY[i + j*width]/ coefficient, 128 + EdgeY[i + j*width]/ coefficient);
-			BMP_SetPixelRGB(gradA, i, j, b/ coefficient, b/ coefficient, b/ coefficient);
+			BMP_SetPixelRGB(gradX, i, j, 128 + EdgeX[i + j*width] / coefficient, 128 + EdgeX[i + j*width] / coefficient, 128 + EdgeX[i + j*width] / coefficient);
+			BMP_SetPixelRGB(gradY, i, j, 128 + EdgeY[i + j*width] / coefficient, 128 + EdgeY[i + j*width] / coefficient, 128 + EdgeY[i + j*width] / coefficient);
+			BMP_SetPixelRGB(gradA, i, j, b / coefficient, b / coefficient, b / coefficient);
 		}
 	}
 	BMP_WriteFile(gradX, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\gradX.bmp");
@@ -844,7 +828,7 @@ BMP* SobelEdgeDetection(BMP* bmp,int thrhld,int coefficient)
 	return gradA;
 }
 
-BMP* CannyEdgeDetection(BMP* bmp, int thrhld, int coefficient,double highShr,double lowShr,int radius)
+BMP* CannyEdgeDetection(BMP* bmp, int thrhld, int coefficient, double highShr, double lowShr, int radius)
 {
 	int SobelX[3][3] = { { -1,0,1 },{ -2,0,2 },{ -1,0,1 } };
 	int SobelY[3][3] = { { -1,-2,-1 },{ 0,0,0 },{ 1,2,1 } };
@@ -957,12 +941,12 @@ BMP* CannyEdgeDetection(BMP* bmp, int thrhld, int coefficient,double highShr,dou
 			//
 			//printf("%3d", Direc[i + j*width]);
 		}
-	//	printf("\n");
+		//	printf("\n");
 	}
 	// Second Iteration
-	for (int i = 1; i < width-1; i++)
+	for (int i = 1; i < width - 1; i++)
 	{
-		for (int j = 0; j < height-1; j++)
+		for (int j = 0; j < height - 1; j++)
 		{
 			if (Direc[i + j*width] != -1)
 			{
@@ -1011,12 +995,12 @@ BMP* CannyEdgeDetection(BMP* bmp, int thrhld, int coefficient,double highShr,dou
 	free(Direc);
 	free(EdgeX);
 	free(EdgeY);
-	Canny = DoubleThreshold(Canny, highShr, lowShr,radius);
+	Canny = DoubleThreshold(Canny, highShr, lowShr, radius);
 	//BMP_WriteFile(Canny, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\Canny.bmp");
 	return Canny;
 }
 
-BMP* DoubleThreshold(BMP* bmp, double high, double low,int radius)
+BMP* DoubleThreshold(BMP* bmp, double high, double low, int radius)
 {
 	//CONSTANTS
 	double HighShrRate = high;
@@ -1080,7 +1064,7 @@ BMP* DoubleThreshold(BMP* bmp, double high, double low,int radius)
 		}
 		if (minflag == 1 && maxflag == 1) break;
 	}
-	printf("totoal pixel= %d\nmax= %d\nmin= %d\n",totalPixel, maxVal, minVal); // DEBUG
+	printf("totoal pixel= %d\nmax= %d\nmin= %d\n", totalPixel, maxVal, minVal); // DEBUG
 	//Double Shreshold
 	for (int i = 0; i < width; i++)
 	{
@@ -1136,7 +1120,7 @@ BMP* DoubleThreshold(BMP* bmp, double high, double low,int radius)
 	return bmp;
 }
 
-int* EgdeConnection(int* img, int width, int height,int radius)
+int* EgdeConnection(int* img, int width, int height, int radius)
 {
 	for (int i = 0; i < width; i++)
 	{
@@ -1162,14 +1146,14 @@ int* EgdeConnection(int* img, int width, int height,int radius)
 	return img;
 }
 
-int* IsConnected(int* img, int width, int height, int x, int y,int radius)
+int* IsConnected(int* img, int width, int height, int x, int y, int radius)
 {
 	img[x + y*width] = 3; // 3 for marked temporaryly
 	for (int i = 0; i < radius; i++)
 	{
 		for (int j = 0; j < radius; j++)
 		{
-			if (!(x - (radius / 2) +i + (y - (radius / 2) + j)*width >= 0 && x - (radius / 2) + i + (y - (radius / 2) + j)*width < height*width)) continue;
+			if (!(x - (radius / 2) + i + (y - (radius / 2) + j)*width >= 0 && x - (radius / 2) + i + (y - (radius / 2) + j)*width < height*width)) continue;
 			if (img[x - (radius / 2) + i + (y - (radius / 2) + j)*width] == 2)
 			{
 				img[x + y*width] = 2;
@@ -1184,7 +1168,7 @@ int* IsConnected(int* img, int width, int height, int x, int y,int radius)
 			if (!(x - (radius / 2) + i + (y - (radius / 2) + j)*width >= 0 && x - (radius / 2) + i + (y - (radius / 2) + j)*width < height*width)) continue;
 			if (img[x - (radius / 2) + i + (y - (radius / 2) + j)*width] == 0)
 			{
-				img = IsConnected(img, width, height, x - (radius / 2) + i, y - (radius / 2) + j,radius);
+				img = IsConnected(img, width, height, x - (radius / 2) + i, y - (radius / 2) + j, radius);
 			}
 			if (img[x - (radius / 2) + i + (y - (radius / 2) + j)*width] == 2)
 			{
@@ -1300,5 +1284,104 @@ BMP* AMRotation(BMP* bmp, double theta)
 		}
 	}
 
+	return newbmp;
+}
+
+double ABS(double a) {
+	if (a >= 0) return a;
+	else return -a;
+}
+
+double s(double a) {
+	if (a >= 0 && a < 1) return 1 - 2 * a*a + a*a*a;
+	if (a >= 1 && a < 2) return 4 - 8 * a + 5 * a*a - 3 * a*a*a;
+	if (a >= 2) return 0;
+}
+
+double huidu(double row, double column, BMP* bmp)
+{
+	int width = BMP_GetWidth(bmp);
+	int height = BMP_GetHeight(bmp);
+	int i = row;
+	int j = column;
+	double u = row - (double)i;
+	double v = column - (double)j;
+	/*double a[4] = { s(u + 1),s(u),s(ABS(u - 1)),s(ABS(u - 2)) };
+	double B[4][4] = { 0 };
+	for (int x = 0; x < 4; x++)
+	{
+		for (int y = 0; y < 4; y++)
+		{
+			UCHAR r, g, b;
+			if (i - 1 + x >= 0 && i - 1 + x < width&&j - 1 + y >= 0 && j - 1 + y < height)
+			{
+				BMP_GetPixelRGB(bmp, i - 1 + x, j - 1 + y, &r, &g, &b);
+				B[x][y] = r;
+			}
+		}
+	}
+	double c[4] = { s(v + 1),s(v),s(ABS(v - 1)),s(ABS(v - 2)) };
+	double d[4] = { 0 };
+	double e = 0;
+	for (int i = 0; i < 4; i++) {
+		d[i] = a[0] * B[0][i] + a[1] * B[1][i] + a[2] * B[2][i] + a[3] * B[3][i];
+	}
+	for (int i = 0; i < 4; i++) {
+		e += d[i] * c[i];
+	}
+	return e;*/
+	double B[2][2] = { 0 };
+	for (int x = 0; x < 2; x++)
+	{
+		for (int y = 0; y < 2; y++) {
+			UCHAR r, g, b;
+			if (i - 1 + x >= 0 && i - 1 + x < width&&j - 1 + y >= 0 && j - 1 + y < height)
+			{
+				BMP_GetPixelRGB(bmp, i - 1 + x, j - 1 + y, &r, &g, &b);
+				B[x][y] = r;
+			}
+		}
+	}
+	return (1 - u)*(1 - v)*B[0][0] + u*(1 - v)*B[1][0] + (1 - u)*v*B[0][1] + u*v*B[1][1];
+
+}
+
+BMP* DINTRotation(BMP* bmp, double theta)
+{
+	RGBtoBW(bmp);
+	//Compute some important coefficient
+	double cost = cos(theta);
+	double sint = sin(theta);
+	double pre_width = BMP_GetWidth(bmp);
+	double pre_height = BMP_GetHeight(bmp);
+	USHORT depth = BMP_GetDepth(bmp);
+
+	//Analysing size of new picture;
+	double max_x = maximum((pre_width*cost - pre_height*sint), -pre_height*sint, 0.1 * 0, pre_width*cost);
+	double min_x = minimum((pre_width*cost - pre_height*sint), -pre_height*sint, 0.1 * 0, pre_width*cost);
+	double max_y = maximum((pre_width*sint + pre_height*cost), pre_height*cost, 0.1 * 0, pre_width*sint);
+	double min_y = minimum((pre_width*sint + pre_height*cost), pre_height*cost, 0.1 * 0, pre_width*sint);
+	double width = max_x - min_x;
+	double height = max_y - min_y;
+
+	BMP* newbmp = BMP_Create(width, height, depth);
+
+	//x`=Ax + (-minx,-miny);
+	for (UINT x = 0; x < width; x++)
+	{
+		for (UINT y = 0; y < height; y++)
+		{
+			double r = 0, g = 0, b = 0;
+
+			//Compute original coordinate in newbmp system
+			double pre_x = cost*(x + min_x) + sint*(y + min_y);
+			double pre_y = -sint*(x + min_x) + cost*(y + min_y);
+			if ((pre_x > 0 && pre_x < pre_width) && (pre_y > 0 && pre_y < pre_height))
+			{
+				r = huidu(pre_x, pre_y, bmp);
+				BMP_SetPixelRGB(newbmp, x, y, (UCHAR)r, (UCHAR)r, (UCHAR)r);
+			}
+		}
+	}
 	return newbmp;
 }
