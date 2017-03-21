@@ -13,6 +13,7 @@
 void RGBtoBW(BMP* bmp);
 void invert(BMP* bmp);
 BMP* zoom(BMP* bmp, int k);
+BMP* downSample(BMP* bmp, int k);
 void reduceLevel(BMP* bmp, int level);
 void BritandCntr(BMP* bmp, int brightness, double contrast);
 BMP* NaiveGaussianBlur(BMP* bmp, double theta, int radius);
@@ -27,45 +28,22 @@ BMP* DoubleThreshold(BMP* bmp, double high, double low, int radius);
 int* EgdeConnection(int* img, int width, int height, int radius);
 int* IsConnected(int* img, int width, int height, int x, int y, int radius);
 BMP* DINTRotation(BMP* bmp, double theta);
+int* NonMaximumSpr(double* img, int width, int height, int windowSize);
+BMP* HarrisCorner(BMP* bmp, double thrhld);
 
 int main()
 {
 	BMP*    bmp;
-	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\test.bmp";
+	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\lenna90.bmp";
 	bmp = BMP_ReadFile(filename);
 	BMP_CHECK_ERROR(stderr, -1);
 	/////////////////////////////////////////////////////////////////////////
 	//Your code in between
-	char filepath[100] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\INTR\\rotate.bmp";
-	BMP* newbmp = DINTRotation(bmp, 30);
+	char filepath[100] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\lenna90Harris.bmp";
+	BMP* newbmp = HarrisCorner(bmp, 1000000);
 	BMP_WriteFile(newbmp, filepath);
 	BMP_Free(newbmp);
 	/////////////////////////////////////////////////////////////////////////
-	/* Save result */
-	/*for (double i = 0.1; i <= 0.9; i+=0.1)
-	{
-		for (double j = i; j <= 0.9; j+=0.1)
-		{
-			char filepath[100]= "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\CannyC\\";
-			int len = strlen(filepath);
-			filepath[len] = 'C';
-			filepath[len + 1] = 'H';
-			itoa((int)(10 * j), filepath + len + 2, 10);
-			len = strlen(filepath);
-			filepath[len] = 'L';
-			itoa((int)(10 * i), filepath + len + 1, 10);
-			len = strlen(filepath);
-			filepath[len] = '.';
-			filepath[len + 1] = 'b';
-			filepath[len + 2] = 'm';
-			filepath[len + 3] = 'p';
-			filepath[len + 4] = 0;
-			BMP* newbmp = CannyEdgeDetection(bmp, 50, 2, j, i);
-			BMP_WriteFile(newbmp, filepath);
-			BMP_Free(newbmp);
-		}
-	}*/
-	/* Free all memory allocated for the image */
 	BMP_Free(bmp);
 
 	//BMP_Free(output);
@@ -144,6 +122,26 @@ BMP* zoom(BMP* bmp, int k)
 			{
 				BMP_SetPixelRGB(newim, iX*k + i, iY, tmpr + difr*i, tmpg + difg*i, tmpb + difb*i);
 			}
+		}
+	}
+	return newim;
+}
+
+BMP* downSample(BMP* bmp, int k)
+{
+	int width, height;
+	int depth;
+	width = BMP_GetWidth(bmp);
+	height = BMP_GetHeight(bmp);
+	depth = BMP_GetDepth(bmp);
+	BMP* newim = BMP_Create(width / k, height / k, depth);
+	for (int i= 0; i < width/k; i++)
+	{
+		for (int j = 0; j < height/k; j++)
+		{
+			int r = 0, g = 0, b = 0;
+			BMP_GetPixelRGB(bmp, i*k, j*k, &r, &g, &b);
+			BMP_SetPixelRGB(newim, i, j, r, g, b);
 		}
 	}
 	return newim;
@@ -395,6 +393,85 @@ BMP* FastGaussianBlur(BMP* bmp, double theta, int radius)
 
 	BMP_Free(newbmp);
 	return newbmp1;
+}
+
+double* GaussianKernel(int* img, double theta, int radius,int width,int height)
+{
+	double* gaussmatrix = malloc(sizeof(double)*radius*radius);
+	double sum = GaussFunction(theta, radius, gaussmatrix);
+	sum = 0;
+	for (int i = 0; i < radius; i++)
+	{
+		sum += gaussmatrix[i + radius*(radius / 2)];
+	}
+	double *ans = malloc(sizeof(double)*width*height);
+	double *img1 = malloc(sizeof(double)*width*height);
+	memset(img1, 0, sizeof(double)*width*height);
+	for (int x = 0; x < width; x++)
+	{
+		for (int y = 0; y < height; y++)
+		{
+			//Fill in colors
+			double val = 0;
+			for (int i = 0; i < radius; i++)
+			{
+				//Reflect boundary
+				int xi = x;
+				if (xi - (radius - 1) / 2 + i < 0)
+				{
+					xi = -(xi - (radius - 1) / 2 + i);
+				}
+				else
+				{
+					xi = (xi - (radius - 1) / 2 + i);
+				}
+				if (xi >= width)
+				{
+					xi = width - (xi - width) - 1;
+				}
+				int value = img[xi + y*width];
+				val += value*gaussmatrix[i + radius*(radius / 2)];
+			}
+			//Calculate total
+			val /= sum;
+			img1[x + y*width] = val;
+		}
+	}
+
+	for (int x = 0; x < width; x++)
+	{
+		for (int y = 0; y < height; y++)
+		{
+			//Fill in colors
+			double val = 0;
+			for (int i = 0; i < radius; i++)
+			{
+				//Reflect boundary
+				int yi = y;
+				if (yi - (radius - 1) / 2 + i < 0)
+				{
+					yi = -(yi - (radius - 1) / 2 + i);
+				}
+				else
+				{
+					yi = (yi - (radius - 1) / 2 + i);
+				}
+				if (yi >= height)
+				{
+					yi = height - (yi - height) - 1;
+				}
+				int value = img1[x + yi*width];
+				val += value*gaussmatrix[i + radius*(radius / 2)];
+			}
+			//Calculate total
+			val /= sum;
+			ans[x + y*width] = val;
+		}
+	}
+	free(gaussmatrix);
+	free(img);
+	free(img1);
+	return ans;
 }
 
 BMP* naiveRotate(double degrees, BMP* bmp)
@@ -1298,6 +1375,10 @@ double s(double a) {
 	if (a >= 2) return 0;
 }
 
+double S(double a) {
+	if (a == 0)return 1;
+	else return sin(PI*a) / (PI*a);
+}
 double huidu(double row, double column, BMP* bmp)
 {
 	int width = BMP_GetWidth(bmp);
@@ -1310,24 +1391,24 @@ double huidu(double row, double column, BMP* bmp)
 	double B[4][4] = { 0 };
 	for (int x = 0; x < 4; x++)
 	{
-		for (int y = 0; y < 4; y++)
-		{
-			UCHAR r, g, b;
-			if (i - 1 + x >= 0 && i - 1 + x < width&&j - 1 + y >= 0 && j - 1 + y < height)
-			{
-				BMP_GetPixelRGB(bmp, i - 1 + x, j - 1 + y, &r, &g, &b);
-				B[x][y] = r;
-			}
-		}
+	for (int y = 0; y < 4; y++)
+	{
+	UCHAR r, g, b;
+	if (i - 1 + x >= 0 && i - 1 + x < width&&j - 1 + y >= 0 && j - 1 + y < height)
+	{
+	BMP_GetPixelRGB(bmp, i - 1 + x, j - 1 + y, &r, &g, &b);
+	B[x][y] = r;
+	}
+	}
 	}
 	double c[4] = { s(v + 1),s(v),s(ABS(v - 1)),s(ABS(v - 2)) };
 	double d[4] = { 0 };
 	double e = 0;
 	for (int i = 0; i < 4; i++) {
-		d[i] = a[0] * B[0][i] + a[1] * B[1][i] + a[2] * B[2][i] + a[3] * B[3][i];
+	d[i] = a[0] * B[0][i] + a[1] * B[1][i] + a[2] * B[2][i] + a[3] * B[3][i];
 	}
 	for (int i = 0; i < 4; i++) {
-		e += d[i] * c[i];
+	e += d[i] * c[i];
 	}
 	return e;*/
 	double B[2][2] = { 0 };
@@ -1345,7 +1426,39 @@ double huidu(double row, double column, BMP* bmp)
 	return (1 - u)*(1 - v)*B[0][0] + u*(1 - v)*B[1][0] + (1 - u)*v*B[0][1] + u*v*B[1][1];
 
 }
-
+int huidu2(double row, double column, BMP* bmp)
+{
+	int width = BMP_GetWidth(bmp);
+	int height = BMP_GetHeight(bmp);
+	int i = row;
+	int j = column;
+	double u = row - (double)i;
+	double v = column - (double)j;
+	double a[4] = { s(ABS(u + 1)),s(ABS(u)),s(ABS(u - 1)),s(ABS(u - 2)) };
+	double B[4][4] = { 0 };
+	for (int x = 0; x < 4; x++)
+	{
+		for (int y = 0; y < 4; y++)
+		{
+			UCHAR r, g, b;
+			if (i - 1 + x >= 0 && i - 1 + x < width&&j - 1 + y >= 0 && j - 1 + y < height)
+			{
+				BMP_GetPixelRGB(bmp, i - 1 + x, j - 1 + y, &r, &g, &b);
+				B[x][y] = r;
+			}
+		}
+	}
+	double c[4] = { s(ABS(v + 1)),s(ABS(v)),s(ABS(v - 1)),s(ABS(v - 2)) };
+	double d[4] = { 0 };
+	double e = 0;
+	for (int i = 0; i < 4; i++) {
+		d[i] = a[0] * B[0][i] + a[1] * B[1][i] + a[2] * B[2][i] + a[3] * B[3][i];
+	}
+	for (int i = 0; i < 4; i++) {
+		e += d[i] * c[i];
+	}
+	return e/320;
+}
 BMP* DINTRotation(BMP* bmp, double theta)
 {
 	RGBtoBW(bmp);
@@ -1384,4 +1497,216 @@ BMP* DINTRotation(BMP* bmp, double theta)
 		}
 	}
 	return newbmp;
+}
+
+BMP* HarrisCorner(BMP* bmp, double thrhld)
+{
+	const double Lambda = 0.2;
+	int SobelX[3][3] = { { -1,0,1 },{ -2,0,2 },{ -1,0,1 } };
+	int SobelY[3][3] = { { -1,-2,-1 },{ 0,0,0 },{ 1,2,1 } };
+	//Convert to Greyscale
+	RGBtoBW(bmp);
+	//Get basic information
+	UINT width, height;
+	USHORT depth;
+	width = BMP_GetWidth(bmp);
+	height = BMP_GetHeight(bmp);
+	depth = BMP_GetDepth(bmp);
+	int* GradX = malloc(sizeof(int)*height*width);
+	int* GradX2 = malloc(sizeof(int)*height*width);
+	int* GradY = malloc(sizeof(int)*height*width);
+	int* GradY2 = malloc(sizeof(int)*height*width);
+	int* GradXY = malloc(sizeof(int)*height*width);
+	int* Direc = malloc(sizeof(int)*height*width);
+	int* GradA = malloc(sizeof(int)*height*width);
+	memset(GradX, 0, sizeof(int)*height*width);
+	memset(GradY, 0, sizeof(int)*height*width);
+	memset(GradX2, 0, sizeof(int)*height*width);
+	memset(GradY2, 0, sizeof(int)*height*width);
+	memset(GradXY, 0, sizeof(int)*height*width);
+	memset(Direc, -1, sizeof(int)*height*width);
+	memset(GradA, 0, sizeof(int)*height*width);
+	BMP* Harris = BMP_Create(width, height, depth);
+	//Convolve with Sobel matrix
+	for (int i = 1; i < width - 1; i++)
+	{
+		for (int j = 1; j < height - 1; j++)
+		{
+			int sumX = 0, sumY = 0;
+			//Calculate gradient
+			for (int iX = 0; iX < 3; iX++)
+			{
+				for (int iY = 0; iY < 3; iY++)
+				{
+					UCHAR r = 0, g = 0, b = 0;
+					BMP_GetPixelRGB(bmp, i + iY - 1, j + iX - 1, &r, &g, &b);
+					sumX += r*SobelX[iX][iY];
+					sumY += r*SobelY[iX][iY];
+				}
+			}
+			if (abs(sumX) > 0 && abs(sumX) < 1020) GradX[i + j*width] = sumX;
+			if (abs(sumY) > 0 && abs(sumY) < 1020) GradY[i + j*width] = sumY;
+			GradA[i + j*width] = sqrt(GradX[i + j*width] * GradX[i + j*width] + GradY[i + j*width] * GradY[i + j*width]);
+			double theta = 0;
+			if (GradA[i + j*width] != 0)
+			{
+				theta = atan2(GradY[i + j*width], GradX[i + j*width]);
+				//Angle rounding ( long code here )
+				{
+					if (theta < PI / 8 && theta >= -PI / 8)
+					{
+						Direc[i + j*width] = 0; // 0 for East
+					}
+					else
+					{
+						if (theta >= PI / 8 && theta < PI * 3 / 8)
+						{
+							Direc[i + j*width] = 1;// 1 for North-East
+						}
+						else
+						{
+							if (theta >= PI * 3 / 8 && theta < PI * 5 / 8)
+							{
+								Direc[i + j*width] = 2;// 2 for North
+							}
+							else
+							{
+								if (theta >= PI * 5 / 8 && theta < PI * 7 / 8)
+								{
+									Direc[i + j*width] = 3;// 3 for North-West
+								}
+								else
+								{
+									if (theta >= PI * 7 / 8 || theta < -PI * 7 / 8)
+									{
+										Direc[i + j*width] = 4;// 4 for West
+									}
+									else
+									{
+										if (theta >= -PI * 7 / 8 && theta < -PI * 5 / 8)
+										{
+											Direc[i + j*width] = 5;// 5 for South-West
+										}
+										else
+										{
+											if (theta >= -PI * 5 / 8 && theta < -PI * 3 / 8)
+											{
+												Direc[i + j*width] = 6;// 6 for South
+											}
+											else
+											{
+												if (theta >= -PI * 3 / 8 && theta < -PI * 1 / 8)
+												{
+													Direc[i + j*width] = 7;// 7 for South-East
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	//Calculating Ix2,Iy2 and Ixy
+	for (int i = 0; i < width; i++)
+	{
+		for (int j = 0; j < height; j++)
+		{
+			GradX2[i + j*width] = GradX[i + j*width] * GradX[i + j*width];
+			GradY2[i + j*width] = GradY[i + j*width] * GradY[i + j*width];
+			GradXY[i + j*width] = GradX[i + j*width] * GradY[i + j*width];
+			//printf("%d ", GradXY[i + j*width]);
+		}
+	}
+	//Gaussian
+	double *Ix2, *Iy2, *Ixy;
+	Ix2 = GaussianKernel(GradX2, 1, 3, width, height);
+	Iy2 = GaussianKernel(GradY2, 1, 3, width, height);
+	Ixy = GaussianKernel(GradXY, 1, 3, width, height);
+	GradX2 = NULL;
+	GradY2 = NULL;
+	GradXY = NULL;
+	//Calculating response
+	double *CornerStr = malloc(sizeof(double)*width*height);
+	memset(CornerStr,0, sizeof(double)*width*height);
+	for (int i = 0; i < width; i++)
+	{
+		for (int j = 0; j < height; j++)
+		{
+			double det_M = Ix2[i + j*width] * Iy2[i + j*width] - Ixy[i + j*width] * Ixy[i + j*width];
+			double tra_M = Ix2[i + j*width] + Iy2[i + j*width];
+			CornerStr[i + j*width] = det_M - Lambda*tra_M*tra_M;
+			//Thresholding
+			if (CornerStr[i + j*width] < thrhld)
+			{
+				CornerStr[i + j*width] = 0;
+			}
+		}
+	}
+	//Non-maximum Supression
+	int *HarrisPre = NonMaximumSpr(CornerStr, width, height, 20);
+	//Freeeeeee
+	free(GradX);
+	free(GradY);
+	free(GradA);
+	free(Direc);
+	free(Ix2);
+	free(Iy2);
+	free(Ixy);
+	//free(CornerStr);
+	//Write IMG
+	for (int i = 0; i < width; i++)
+	{
+		for (int j = 0; j < height; j++)
+		{
+			UCHAR r, g, b;
+			BMP_GetPixelRGB(bmp, i, j, &r, &g, &b);
+			BMP_SetPixelRGB(Harris, i, j, r, g, b);
+			if (HarrisPre[i + j*width] != 0)
+			{
+				for (int ki = 0; ki < 5; ki++)
+				{
+					for (int kj = 0; kj < 5; kj++)
+					{
+						BMP_SetPixelRGB(Harris, i - 2 + ki, j - 2 + kj, 0, 255, 0);
+					}
+				}
+			}
+		}
+	}
+	return Harris;
+}
+
+int* NonMaximumSpr(double* img, int width, int height, int windowSize)
+{
+	int *ans = malloc(sizeof(int)*width*height);
+	memset(ans, 0, sizeof(int)*width*height);
+	for (int i = 0; i < width/windowSize; i++)
+	{
+		for (int j = 0; j < width / windowSize; j++)
+		{
+			double max = 0;
+			int maxpos = -1;
+			for (int ti = 0; ti < windowSize; ti++)
+			{
+				for (int tj = 0; tj < windowSize; tj++)
+				{
+					int pos = i*windowSize + ti + (j*windowSize + tj)*width;
+					if (pos >= 0 && pos < width*height)
+					{
+						if (img[i*windowSize + ti + (j*windowSize + tj)*width] > max)
+						{
+							max = img[i*windowSize + ti + (j*windowSize + tj)*width];
+							maxpos = pos;
+						}
+					}
+				}
+			}
+			if (max > 10) ans[maxpos] = 1;
+		}
+	}
+	return ans;
 }
