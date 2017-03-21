@@ -20,4 +20,6 @@ Current Functions:
 
 7.Rotate an image by different methods
 
-8.Edge detection
+8.Edge detection (Sobel and Canny method)
+
+9.Harris Edge Detector
