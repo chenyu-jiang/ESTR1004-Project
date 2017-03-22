@@ -1,6 +1,5 @@
 ﻿  source.c
 c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(45): warning C4244: “函数”: 从“double”转换到“unsigned char”，可能丢失数据
 c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(124): warning C4098: “reduceLevel”:“void”函数返回值
-c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(152): warning C4098: “BritandCntr”:“void”函数返回值
   ImageProcessing.vcxproj -> C:\Users\HP\documents\visual studio 2015\Projects\ImageProcessing\Debug\ImageProcessing.exe
   ImageProcessing.vcxproj -> C:\Users\HP\documents\visual studio 2015\Projects\ImageProcessing\Debug\ImageProcessing.pdb (Full PDB)
