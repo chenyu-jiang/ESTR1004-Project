@@ -31,6 +31,7 @@ int* IsConnected(int* img, int width, int height, int x, int y, int radius);
 BMP* DINTRotation(BMP* bmp, double theta);
 int* NonMaximumSpr(double* img, int width, int height, int windowSize);
 BMP* HarrisCorner(BMP* bmp, double thrhld);
+descripter* GenerateDescripter(int* Harris, int width, int height, int* Direc, BMP* bmp, int* GrA, int* point);
 
 int main()
 {
@@ -41,7 +42,7 @@ int main()
 	/////////////////////////////////////////////////////////////////////////
 	//Your code in between
 	char filepath[100] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\lenna90Harris.bmp";
-	BMP* newbmp = HarrisCorner(bmp, 1000000);
+	BMP* newbmp = HarrisCorner(bmp, 4000000);
 	BMP_WriteFile(newbmp, filepath);
 	BMP_Free(newbmp);
 	/////////////////////////////////////////////////////////////////////////
@@ -396,7 +397,86 @@ BMP* FastGaussianBlur(BMP* bmp, double theta, int radius)
 	return newbmp1;
 }
 
-double* GaussianKernel(int* img, double theta, int radius,int width,int height)
+double* GaussianKernelDouble(double* img, double theta, int radius,int width,int height)
+{
+	double* gaussmatrix = malloc(sizeof(double)*radius*radius);
+	double sum = GaussFunction(theta, radius, gaussmatrix);
+	sum = 0;
+	for (int i = 0; i < radius; i++)
+	{
+		sum += gaussmatrix[i + radius*(radius / 2)];
+	}
+	double *ans = malloc(sizeof(double)*width*height);
+	double *img1 = malloc(sizeof(double)*width*height);
+	memset(img1, 0, sizeof(double)*width*height);
+	for (int x = 0; x < width; x++)
+	{
+		for (int y = 0; y < height; y++)
+		{
+			//Fill in colors
+			double val = 0;
+			for (int i = 0; i < radius; i++)
+			{
+				//Reflect boundary
+				int xi = x;
+				if (xi - (radius - 1) / 2 + i < 0)
+				{
+					xi = -(xi - (radius - 1) / 2 + i);
+				}
+				else
+				{
+					xi = (xi - (radius - 1) / 2 + i);
+				}
+				if (xi >= width)
+				{
+					xi = width - (xi - width) - 1;
+				}
+				double value = img[xi + y*width];
+				val += value*gaussmatrix[i + radius*(radius / 2)];
+			}
+			//Calculate total
+			val /= sum;
+			img1[x + y*width] = val;
+		}
+	}
+
+	for (int x = 0; x < width; x++)
+	{
+		for (int y = 0; y < height; y++)
+		{
+			//Fill in colors
+			double val = 0;
+			for (int i = 0; i < radius; i++)
+			{
+				//Reflect boundary
+				int yi = y;
+				if (yi - (radius - 1) / 2 + i < 0)
+				{
+					yi = -(yi - (radius - 1) / 2 + i);
+				}
+				else
+				{
+					yi = (yi - (radius - 1) / 2 + i);
+				}
+				if (yi >= height)
+				{
+					yi = height - (yi - height) - 1;
+				}
+				double value = img1[x + yi*width];
+				val += value*gaussmatrix[i + radius*(radius / 2)];
+			}
+			//Calculate total
+			val /= sum;
+			ans[x + y*width] = val;
+		}
+	}
+	free(gaussmatrix);
+	free(img);
+	free(img1);
+	return ans;
+}
+
+double* GaussianKernel(int* img, double theta, int radius, int width, int height)
 {
 	double* gaussmatrix = malloc(sizeof(double)*radius*radius);
 	double sum = GaussFunction(theta, radius, gaussmatrix);
@@ -1650,7 +1730,22 @@ BMP* HarrisCorner(BMP* bmp, double thrhld)
 	//Non-maximum Supression
 	int *HarrisFin = NonMaximumSpr(CornerStr, width, height, 20);
 	//Generate Descripter
-	linkedlist EigenPoints = GenerateDescripter();
+	int pointcount = 0;
+	descripter* EigenPoints = GenerateDescripter(HarrisFin, width, height, Direc, bmp, GradA, &pointcount);
+	///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	for (int i = 0; i < pointcount; i++)
+	{
+		printf("P%d: ", i + 1);
+		for (int j = 0; j < 32; j++)
+		{
+			printf("%-4.3f", EigenPoints[i].vector[j]);
+		}
+		printf("\n");
+	}
+
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////
 	//Freeeeeee
 	free(GradX);
 	free(GradY);
@@ -1682,9 +1777,12 @@ BMP* HarrisCorner(BMP* bmp, double thrhld)
 	return Harris;
 }
 
-linkedlist GenerateDescripter(int* Harris,int width, int height, int* Direc, int* GradX,int* GradY)
+descripter* GenerateDescripter(int* Harris, int width, int height, int* Direc, BMP* bmp, int* GrA, int* point)
 {
 	int PointCount = 0;
+	//Malloc Descriptor
+	descripter* KeyPoints = malloc(sizeof(descripter)*(height / 5 * width / 5));
+	memset(KeyPoints, 0, sizeof(descripter)*(height / 5 * width / 5));
 	for (int i = 0; i < width; i++)
 	{
 		for (int j = 0; j < height; j++)
@@ -1694,12 +1792,15 @@ linkedlist GenerateDescripter(int* Harris,int width, int height, int* Direc, int
 			if (Harris[i + j*width] != 0)
 			{
 				//Calculating histogram
-				int histo[8] = { 0 };
+				double histo1[8] = { 0 };
 				for (int x = 0; x < 7; x++)
 				{
 					for (int y = 0; y < 7; y++)
 					{
-						histo[Direc[i - 3 + x + (j - 3 + y)*width]]++;
+						if ((i - 3 + x + (j - 3 + y)*width) < width*height && (i - 3 + x + (j - 3 + y)*width) >= 0)
+						{
+							histo1[Direc[i - 3 + x + (j - 3 + y)*width]] += GrA[i - 3 + x + (j - 3 + y)*width];
+						}
 					}
 				}
 				//Find its peak
@@ -1707,21 +1808,219 @@ linkedlist GenerateDescripter(int* Harris,int width, int height, int* Direc, int
 				int maxi = 0;
 				for (int t = 0; t < 8; t++)
 				{
-					if (histo[t] > max)
+					if (histo1[t] > max)
 					{
-						max = histo[t];
+						max = histo1[t];
 						maxi = t;
 					}
 				}
 				direc = maxi;
-				//Malloc Descriptor
-				descripter* KeyPoints = malloc(sizeof(descripter)*(height / 5 * width / 5));
-				memset(KeyPoints, 0, sizeof(descripter)*(height / 5 * width / 5));
-				// 2.Sample the circle
-				// 3. Generate 128-d vector
+
+				//Rotating image
+				KeyPoints[PointCount].direc = direc;
+				double theta = direc*PI / 4;
+				BMP* tmpbmp = AMRotation(bmp, theta);
+				//Convert to Greyscale
+				RGBtoBW(tmpbmp);
+				//Compute some important coefficient
+				double cost = cos(theta);
+				double sint = sin(theta);
+				double pre_width = BMP_GetWidth(bmp);
+				double pre_height = BMP_GetHeight(bmp);
+				//Analysing size of new picture;
+				double max_x = maximum((pre_width*cost - pre_height*sint), -pre_height*sint, 0.1 * 0, pre_width*cost);
+				double min_x = minimum((pre_width*cost - pre_height*sint), -pre_height*sint, 0.1 * 0, pre_width*cost);
+				double max_y = maximum((pre_width*sint + pre_height*cost), pre_height*cost, 0.1 * 0, pre_width*sint);
+				double min_y = minimum((pre_width*sint + pre_height*cost), pre_height*cost, 0.1 * 0, pre_width*sint);
+				//Calculating new coordinates
+				int newx = (int)(cost*i - sint*j - min_x);
+				int newy = (int)(sint*i + cost*j - min_y);
+				//Calculating Gradients
+				double *GrX = malloc(sizeof(double) * 16 * 16);
+				double *GrY = malloc(sizeof(double) * 16 * 16);
+				int *Dre = malloc(sizeof(int) * 16 * 16);
+				for (int tx = 0; tx < 16; tx++)
+				{
+					for (int ty = 0; ty < 16; ty++)
+					{
+						int SobelY[3][3] = { { -1,0,1 },{ -2,0,2 },{ -1,0,1 } };
+						int SobelX[3][3] = { { -1,-2,-1 },{ 0,0,0 },{ 1,2,1 } };
+						int sumX = 0, sumY = 0;
+						for (int iX = 0; iX < 3; iX++)
+						{
+							for (int iY = 0; iY < 3; iY++)
+							{
+								UCHAR r = 0, g = 0, b = 0;
+								BMP_GetPixelRGB(bmp, newx + tx + iX - 8, newy + ty + iY - 8, &r, &g, &b);
+								sumX += r*SobelX[iX][iY];
+								sumY += r*SobelY[iX][iY];
+							}
+						}
+						GrX[tx + ty*16] = sumX;
+						GrY[tx + ty*16] = sumY;
+						double theta = 0;
+						theta = atan2(GrY[tx + ty*16], GrX[tx + ty*16]);
+						//Angle rounding ( long code here )
+						{
+							if (theta < PI / 8 && theta >= -PI / 8)
+							{
+								Dre[tx + ty*16] = 0; // 0 for East
+							}
+							else
+							{
+								if (theta >= PI / 8 && theta < PI * 3 / 8)
+								{
+									Dre[tx + ty*16] = 1;// 1 for North-East
+								}
+								else
+								{
+									if (theta >= PI * 3 / 8 && theta < PI * 5 / 8)
+									{
+										Dre[tx + ty*16] = 2;// 2 for North
+									}
+									else
+									{
+										if (theta >= PI * 5 / 8 && theta < PI * 7 / 8)
+										{
+											Dre[tx + ty*16] = 3;// 3 for North-West
+										}
+										else
+										{
+											if (theta >= PI * 7 / 8 || theta < -PI * 7 / 8)
+											{
+												Dre[tx + ty*16] = 4;// 4 for West
+											}
+											else
+											{
+												if (theta >= -PI * 7 / 8 && theta < -PI * 5 / 8)
+												{
+													Dre[tx + ty*16] = 5;// 5 for South-West
+												}
+												else
+												{
+													if (theta >= -PI * 5 / 8 && theta < -PI * 3 / 8)
+													{
+														Dre[tx + ty*16] = 6;// 6 for South
+													}
+													else
+													{
+														if (theta >= -PI * 3 / 8 && theta < -PI * 1 / 8)
+														{
+															Dre[tx + ty*16] = 7;// 7 for South-East
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				double* gaussmatrix = malloc(sizeof(double) * 16 * 16);
+				double sum = GaussFunction(5, 16, gaussmatrix);
+				for (int t = 0; t < 16; t++)
+				{
+					for (int l = 0; l < 16; l++)
+					{
+						GrX[t + l * 16] *= gaussmatrix[t + l * 16];
+						GrX[t + l * 16] /= sum;
+						GrY[t + l * 16] *= gaussmatrix[t + l * 16];
+						GrY[t + l * 16] /= sum;
+					}
+				}
+				//Generate 128-d vector
+				//Calculate Histogram
+				//First 8*8
+				double histo[8] = { 0 };
+				for (int tk = 0; tk < 8; tk++)
+				{
+					for (int tl = 0; tl < 8; tl++)
+					{
+						histo[Dre[tk + tl * 16]] += sqrt(GrX[tk + tl * 16] * GrX[tk + tl * 16] + GrY[tk + tl * 16] * GrY[tk + tl * 16]);
+					}
+				}
+				double isum = 0;
+				for (int tmp = 0; tmp <8; tmp++)
+				{
+					isum += histo[tmp]*histo[tmp];
+				}
+				for (int tmp = 0; tmp <8; tmp++)
+				{
+					if(isum!=0) histo[tmp] /= sqrt(isum);
+					KeyPoints[PointCount].vector[tmp] = histo[tmp];
+				}
+				//Second 8*8
+				memset(histo, 0, sizeof(double) * 8);
+				for (int tk = 8; tk < 16; tk++)
+				{
+					for (int tl = 0; tl < 8; tl++)
+					{
+						histo[Dre[tk + tl * 16]] += sqrt(GrX[tk + tl * 16] * GrX[tk + tl * 16] + GrY[tk + tl * 16] * GrY[tk + tl * 16]);
+					}
+				}
+				isum = 0;
+				for (int tmp = 0; tmp <8; tmp++)
+				{
+					isum += histo[tmp]*histo[tmp];
+				}
+				for (int tmp = 0; tmp <8; tmp++)
+				{
+					if (isum != 0) histo[tmp] /= sqrt(isum);
+					KeyPoints[PointCount].vector[tmp + 8] = histo[tmp];
+				}
+				//Third 8*8
+				memset(histo, 0, sizeof(double) * 8);
+				for (int tk = 0; tk < 8; tk++)
+				{
+					for (int tl = 8; tl < 16; tl++)
+					{
+						histo[Dre[tk + tl * 16]] += sqrt(GrX[tk + tl * 16] * GrX[tk + tl * 16] + GrY[tk + tl * 16] * GrY[tk + tl * 16]);
+					}
+				}
+				isum = 0;
+				for (int tmp = 0; tmp <8; tmp++)
+				{
+					isum += histo[tmp] * histo[tmp];
+				}
+				for (int tmp = 0; tmp <8; tmp++)
+				{
+					if (isum != 0) histo[tmp] /= sqrt(isum);
+					KeyPoints[PointCount].vector[tmp + 16] = histo[tmp];
+				}
+				//Fourth 8*8
+				memset(histo, 0, sizeof(double) * 8);
+				for (int tk = 8; tk < 16; tk++)
+				{
+					for (int tl = 8; tl < 16; tl++)
+					{
+						histo[Dre[tk + tl * 16]] += sqrt(GrX[tk + tl * 16] * GrX[tk + tl * 16] + GrY[tk + tl * 16] * GrY[tk + tl * 16]);
+					}
+				}
+				isum = 0;
+				for (int tmp = 0; tmp <8; tmp++)
+				{
+					isum += histo[tmp] * histo[tmp];
+				}
+				for (int tmp = 0; tmp <8; tmp++)
+				{
+					if (isum != 0) histo[tmp] /= sqrt(isum);
+					KeyPoints[PointCount].vector[tmp + 24] = histo[tmp];
+				}
+				PointCount++;
+				//free
+				free(GrX);
+				free(GrY);
+				free(Dre);
+				BMP_Free(tmpbmp);
+				free(gaussmatrix);
 			}
+
 		}
 	}
+	*point = PointCount;
+	return KeyPoints;
 }
 
 int* NonMaximumSpr(double* img, int width, int height, int windowSize)
