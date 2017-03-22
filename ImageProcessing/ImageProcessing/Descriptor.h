@@ -4,7 +4,7 @@ typedef struct Descripter {
 	int x;
 	int y;
 	int direc;
-	int vector[128];
+	double vector[32];
 } descripter;
 
 typedef struct Linkedlist {
