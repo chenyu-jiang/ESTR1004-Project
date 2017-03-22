@@ -21,9 +21,15 @@
     <ClCompile Include="source.c">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="descriptor.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="qdbmp.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Descriptor.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

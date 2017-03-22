@@ -1,5 +1,53 @@
 ﻿  source.c
-c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(45): warning C4244: “函数”: 从“double”转换到“unsigned char”，可能丢失数据
-c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(124): warning C4098: “reduceLevel”:“void”函数返回值
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(65): warning C4244: “函数”: 从“double”转换到“unsigned char”，可能丢失数据
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(143): warning C4133: “函数”: 从“int *”到“unsigned char *”的类型不兼容
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(164): warning C4098: “reduceLevel”:“void”函数返回值
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(192): warning C4098: “BritandCntr”:“void”函数返回值
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(264): warning C4018: “>=”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(268): warning C4018: “>=”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(336): warning C4018: “>=”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(372): warning C4018: “>=”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(463): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(499): warning C4244: “函数”: 从“double”转换到“unsigned long”，可能丢失数据
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(513): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(515): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(533): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(535): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(723): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(725): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(761): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(763): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(867): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(869): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(890): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(892): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(938): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(940): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(956): warning C4244: “=”: 从“double”转换到“int”，可能丢失数据
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1024): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1026): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1096): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1098): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1146): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1148): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1183): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1185): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1341): warning C4244: “函数”: 从“double”转换到“unsigned long”，可能丢失数据
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1386): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1387): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1460): warning C4244: “return”: 从“double”转换到“int”，可能丢失数据
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1433): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1434): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1480): warning C4244: “函数”: 从“double”转换到“unsigned long”，可能丢失数据
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1531): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1533): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1549): warning C4244: “=”: 从“double”转换到“int”，可能丢失数据
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1614): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1616): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1635): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1637): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1661): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1663): warning C4018: “<”: 有符号/无符号不匹配
+c:\users\hp\documents\visual studio 2015\projects\imageprocessing\imageprocessing\source.c(1376): warning C4715: “s”: 不是所有的控件路径都返回值
   ImageProcessing.vcxproj -> C:\Users\HP\documents\visual studio 2015\Projects\ImageProcessing\Debug\ImageProcessing.exe
   ImageProcessing.vcxproj -> C:\Users\HP\documents\visual studio 2015\Projects\ImageProcessing\Debug\ImageProcessing.pdb (Full PDB)
