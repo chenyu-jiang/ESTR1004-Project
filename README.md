@@ -6,6 +6,7 @@ Please commit changes to source.c
 
 
 Current Functions:
+
 1.Convert RGB to BW.
 
 2.Invert a image.
@@ -24,9 +25,9 @@ Current Functions:
 
 9.Harris Corner Detector
 
-10. Basic Point Matching
+10.Basic Point Matching
 
 TO DO
-1. RANSAC
-2. Image Blending
-3. USM Sharpening
+1.RANSAC
+2.Image Blending
+3.USM Sharpening
