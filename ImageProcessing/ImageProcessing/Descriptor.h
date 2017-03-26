@@ -4,12 +4,16 @@ typedef struct Descripter {
 	int x;
 	int y;
 	int direc;
-	double vector[32];
+	double vector[128];
 } descripter;
 
-typedef struct Linkedlist {
-	descripter vector;
-	struct Linkedlist* next;
-} linkedlist;
+typedef struct Point {
+	int x;
+	int y;
+} point;
 
-linkedlist NewLinkedlist(descripter v);
+
+typedef struct PointPair {
+	struct Point p1;
+	struct Point p2;
+} pointpair;
