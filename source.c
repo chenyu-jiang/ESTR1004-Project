@@ -30,24 +30,39 @@ int* EgdeConnection(int* img, int width, int height, int radius);
 int* IsConnected(int* img, int width, int height, int x, int y, int radius);
 BMP* DINTRotation(BMP* bmp, double theta);
 int* NonMaximumSpr(double* img, int width, int height, int windowSize);
-BMP* HarrisCorner(BMP* bmp, double thrhld);
-descripter* GenerateDescripter(int* Harris, int width, int height, int* Direc, BMP* bmp, int* GrA, int* point);
+descripter* HarrisCorner(BMP* bmp, double thrhld, int* poic);
+BMP* HarrisCornerDetector(BMP* bmp, double thrhld);
+descripter* GenerateDescripter(int* Harris, int width, int height, int* GradY, int* GradX, BMP* bmp, int* GrA, int* point);
+BMP* AMRotationParts(BMP* bmp, int x, int y, int radius, double theta, BMP** bmpt);
+double distof128(descripter desc1, descripter desc2);
+void DrawLine(BMP* bmp, int inix, int iniy, int desx, int desy, int r, int g, int b);
+BMP* ImageStitching(BMP* img1, BMP* img2, double thrhld);
+pointpair* GeneratePointpair(BMP* img1, BMP* img2, double thrhld, int *paircount);
+
 
 int main()
 {
-	BMP*    bmp;
-	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\lenna90.bmp";
+	BMP *bmp, *bmp1;
+	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\lenna.bmp";
+	char filename1[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\lenna157.bmp";
 	bmp = BMP_ReadFile(filename);
+	bmp1 = BMP_ReadFile(filename1);
 	BMP_CHECK_ERROR(stderr, -1);
 	/////////////////////////////////////////////////////////////////////////
 	//Your code in between
-	char filepath[100] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\lenna90Harris.bmp";
-	BMP* newbmp = HarrisCorner(bmp, 4000000);
+	char filepath[100] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\PointPair.bmp";
+	BMP* newbmp = ImageStitching(bmp, bmp1,9000000);
 	BMP_WriteFile(newbmp, filepath);
+	BMP_Free(newbmp);
+	newbmp = HarrisCornerDetector(bmp, 9000000);
+	BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\HarrisL.bmp");
+	BMP_Free(newbmp);
+	newbmp = HarrisCornerDetector(bmp1, 9000000);
+	BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\HarrisR.bmp");
 	BMP_Free(newbmp);
 	/////////////////////////////////////////////////////////////////////////
 	BMP_Free(bmp);
-
+	BMP_Free(bmp1);
 	//BMP_Free(output);
 	return 0;
 }
@@ -1580,7 +1595,7 @@ BMP* DINTRotation(BMP* bmp, double theta)
 	return newbmp;
 }
 
-BMP* HarrisCorner(BMP* bmp, double thrhld)
+descripter* HarrisCorner(BMP* bmp, double thrhld,int* poic) //poic for point count
 {
 	const double Lambda = 0.2;
 	int SobelX[3][3] = { { -1,0,1 },{ -2,0,2 },{ -1,0,1 } };
@@ -1607,7 +1622,7 @@ BMP* HarrisCorner(BMP* bmp, double thrhld)
 	memset(GradXY, 0, sizeof(int)*height*width); 
 	memset(Direc, -1, sizeof(int)*height*width); 
 	memset(GradA, 0, sizeof(int)*height*width); 
-	BMP* Harris = BMP_Create(width, height, depth);
+	//BMP* Harris = BMP_Create(width, height, depth);
 	//Convolve with Sobel matrix
 	for (int i = 1; i < width - 1; i++)
 	{
@@ -1731,10 +1746,11 @@ BMP* HarrisCorner(BMP* bmp, double thrhld)
 	int *HarrisFin = NonMaximumSpr(CornerStr, width, height, 20);
 	//Generate Descripter
 	int pointcount = 0;
-	descripter* EigenPoints = GenerateDescripter(HarrisFin, width, height, Direc, bmp, GradA, &pointcount);
+	descripter* EigenPoints = GenerateDescripter(HarrisFin, width, height, GradY, GradX, bmp, GradA, &pointcount);
+	*poic = pointcount;
 	///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	for (int i = 0; i < pointcount; i++)
+	/*for (int i = 0; i < pointcount; i++)
 	{
 		printf("P%d: ", i + 1);
 		for (int j = 0; j < 32; j++)
@@ -1742,10 +1758,190 @@ BMP* HarrisCorner(BMP* bmp, double thrhld)
 			printf("%-4.3f", EigenPoints[i].vector[j]);
 		}
 		printf("\n");
-	}
+	}*/
 
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////
+	//Freeeeeee
+	free(GradX);
+	free(GradY);
+	free(GradA);
+	free(Direc);
+	free(Ix2);
+	free(Iy2);
+	free(Ixy);
+	//Write IMG
+	/*for (int i = 0; i < width; i++)
+	{
+		for (int j = 0; j < height; j++)
+		{
+			UCHAR r, g, b;
+			BMP_GetPixelRGB(bmp, i, j, &r, &g, &b);
+			BMP_SetPixelRGB(Harris, i, j, r, g, b);
+			if (HarrisFin[i + j*width] != 0)
+			{
+				for (int ki = 0; ki < 5; ki++)
+				{
+					for (int kj = 0; kj < 5; kj++)
+					{
+						BMP_SetPixelRGB(Harris, i - 2 + ki, j - 2 + kj, 0, 255, 0);
+					}
+				}
+			}
+		}
+	}*/
+	return EigenPoints;
+}
+
+BMP* HarrisCornerDetector(BMP* bmp, double thrhld)
+{
+	const double Lambda = 0.2;
+	int SobelX[3][3] = { { -1,0,1 },{ -2,0,2 },{ -1,0,1 } };
+	int SobelY[3][3] = { { -1,-2,-1 },{ 0,0,0 },{ 1,2,1 } };
+	//Convert to Greyscale
+	RGBtoBW(bmp);
+	//Get basic information
+	UINT width, height;
+	USHORT depth;
+	width = BMP_GetWidth(bmp);
+	height = BMP_GetHeight(bmp);
+	depth = BMP_GetDepth(bmp);
+	int* GradX = malloc(sizeof(int)*height*width); //Gradient in X direction
+	int* GradX2 = malloc(sizeof(int)*height*width); //Square of gradient in X direction
+	int* GradY = malloc(sizeof(int)*height*width); //Gradient in Y direction
+	int* GradY2 = malloc(sizeof(int)*height*width); //Square of gradient in Y direction
+	int* GradXY = malloc(sizeof(int)*height*width); //Product of gradient in X and Y direction
+	int* Direc = malloc(sizeof(int)*height*width); //Direction of the gradient (Rounded to eight main directions)
+	int* GradA = malloc(sizeof(int)*height*width); //Amplitude of gradient
+	memset(GradX, 0, sizeof(int)*height*width);
+	memset(GradY, 0, sizeof(int)*height*width);
+	memset(GradX2, 0, sizeof(int)*height*width);
+	memset(GradY2, 0, sizeof(int)*height*width);
+	memset(GradXY, 0, sizeof(int)*height*width);
+	memset(Direc, -1, sizeof(int)*height*width);
+	memset(GradA, 0, sizeof(int)*height*width);
+	BMP* Harris = BMP_Create(width, height, depth);
+	//Convolve with Sobel matrix
+	for (int i = 1; i < width - 1; i++)
+	{
+		for (int j = 1; j < height - 1; j++)
+		{
+			int sumX = 0, sumY = 0;
+			//Calculate gradient
+			for (int iX = 0; iX < 3; iX++)
+			{
+				for (int iY = 0; iY < 3; iY++)
+				{
+					UCHAR r = 0, g = 0, b = 0;
+					BMP_GetPixelRGB(bmp, i + iY - 1, j + iX - 1, &r, &g, &b);
+					sumX += r*SobelX[iX][iY];
+					sumY += r*SobelY[iX][iY];
+				}
+			}
+			if (abs(sumX) > 0 && abs(sumX) < 1020) GradX[i + j*width] = sumX;
+			if (abs(sumY) > 0 && abs(sumY) < 1020) GradY[i + j*width] = sumY;
+			GradA[i + j*width] = sqrt(GradX[i + j*width] * GradX[i + j*width] + GradY[i + j*width] * GradY[i + j*width]);
+			double theta = 0;
+			if (GradA[i + j*width] != 0)
+			{
+				theta = atan2(GradY[i + j*width], GradX[i + j*width]);
+				//Angle rounding ( long code here. Do not expand if not necessary)
+				{
+					if (theta < PI / 8 && theta >= -PI / 8)
+					{
+						Direc[i + j*width] = 0; // 0 for East
+					}
+					else
+					{
+						if (theta >= PI / 8 && theta < PI * 3 / 8)
+						{
+							Direc[i + j*width] = 1;// 1 for North-East
+						}
+						else
+						{
+							if (theta >= PI * 3 / 8 && theta < PI * 5 / 8)
+							{
+								Direc[i + j*width] = 2;// 2 for North
+							}
+							else
+							{
+								if (theta >= PI * 5 / 8 && theta < PI * 7 / 8)
+								{
+									Direc[i + j*width] = 3;// 3 for North-West
+								}
+								else
+								{
+									if (theta >= PI * 7 / 8 || theta < -PI * 7 / 8)
+									{
+										Direc[i + j*width] = 4;// 4 for West
+									}
+									else
+									{
+										if (theta >= -PI * 7 / 8 && theta < -PI * 5 / 8)
+										{
+											Direc[i + j*width] = 5;// 5 for South-West
+										}
+										else
+										{
+											if (theta >= -PI * 5 / 8 && theta < -PI * 3 / 8)
+											{
+												Direc[i + j*width] = 6;// 6 for South
+											}
+											else
+											{
+												if (theta >= -PI * 3 / 8 && theta < -PI * 1 / 8)
+												{
+													Direc[i + j*width] = 7;// 7 for South-East
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	//Calculating Ix2,Iy2 and Ixy
+	for (int i = 0; i < width; i++)
+	{
+		for (int j = 0; j < height; j++)
+		{
+			GradX2[i + j*width] = GradX[i + j*width] * GradX[i + j*width];
+			GradY2[i + j*width] = GradY[i + j*width] * GradY[i + j*width];
+			GradXY[i + j*width] = GradX[i + j*width] * GradY[i + j*width];
+			//printf("%d ", GradXY[i + j*width]);
+		}
+	}
+	//Gaussian
+	double *Ix2, *Iy2, *Ixy;
+	Ix2 = GaussianKernel(GradX2, 1, 3, width, height);
+	Iy2 = GaussianKernel(GradY2, 1, 3, width, height);
+	Ixy = GaussianKernel(GradXY, 1, 3, width, height);
+	GradX2 = NULL;
+	GradY2 = NULL;
+	GradXY = NULL;
+	//Calculating response
+	double *CornerStr = malloc(sizeof(double)*width*height);
+	memset(CornerStr, 0, sizeof(double)*width*height);
+	for (int i = 0; i < width; i++)
+	{
+		for (int j = 0; j < height; j++)
+		{
+			double det_M = Ix2[i + j*width] * Iy2[i + j*width] - Ixy[i + j*width] * Ixy[i + j*width];
+			double tra_M = Ix2[i + j*width] + Iy2[i + j*width];
+			CornerStr[i + j*width] = det_M - Lambda*tra_M*tra_M;
+			//Thresholding
+			if (CornerStr[i + j*width] < thrhld)
+			{
+				CornerStr[i + j*width] = 0;
+			}
+		}
+	}
+	//Non-maximum Supression
+	int *HarrisFin = NonMaximumSpr(CornerStr, width, height, 20);
 	//Freeeeeee
 	free(GradX);
 	free(GradY);
@@ -1777,8 +1973,31 @@ BMP* HarrisCorner(BMP* bmp, double thrhld)
 	return Harris;
 }
 
-descripter* GenerateDescripter(int* Harris, int width, int height, int* Direc, BMP* bmp, int* GrA, int* point)
+BMP* AMRotationParts(BMP* bmp,int x, int y, int radius, double theta,BMP** bmpt)
 {
+	int height = BMP_GetHeight(bmp);
+	int width = BMP_GetWidth(bmp);
+	int depth = BMP_GetDepth(bmp);
+	BMP* newbmp = BMP_Create(radius * 2, radius * 2, depth);
+	for (int i = 0; i < radius*2; i++)
+	{
+		for (int j = 0; j < radius*2; j++)
+		{
+			int r, g, b;
+			BMP_GetPixelRGB(bmp, x - radius + i, y - radius + j, &r, &g, &b);
+			BMP_SetPixelRGB(newbmp, i, j, r, g, b);
+		}
+	}
+	*bmpt = newbmp;
+	newbmp = AMRotation(newbmp, theta);
+	//BMP_WriteFile(*bmpt, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\Before.bmp");
+	//BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\After.bmp");
+	return newbmp;
+}
+
+descripter* GenerateDescripter(int* Harris, int width, int height,int* GradY,int* GradX, BMP* bmp, int* GrA, int* point)
+{
+	const int area = 16;
 	int PointCount = 0;
 	//Malloc Descriptor
 	descripter* KeyPoints = malloc(sizeof(descripter)*(height / 5 * width / 5));
@@ -1792,21 +2011,24 @@ descripter* GenerateDescripter(int* Harris, int width, int height, int* Direc, B
 			if (Harris[i + j*width] != 0)
 			{
 				//Calculating histogram
-				double histo1[8] = { 0 };
-				for (int x = 0; x < 7; x++)
+				double histo1[36] = { 0 };
+				for (int x = 0; x < 16; x++)
 				{
-					for (int y = 0; y < 7; y++)
+					for (int y = 0; y < 16; y++)
 					{
-						if ((i - 3 + x + (j - 3 + y)*width) < width*height && (i - 3 + x + (j - 3 + y)*width) >= 0)
+						double theta = atan2(GradY[i + j*width], GradX[i + j*width]);
+						if (theta < 0) theta += 2 * PI;
+						direc = (int)(theta / (PI / 18));
+						if ((i - 8 + x + (j - 8 + y)*width) < width*height && (i - 8 + x + (j - 8 + y)*width) >= 0)
 						{
-							histo1[Direc[i - 3 + x + (j - 3 + y)*width]] += GrA[i - 3 + x + (j - 3 + y)*width];
+							histo1[direc] += GrA[i - 8 + x + (j - 8 + y)*width];
 						}
 					}
 				}
 				//Find its peak
 				int max = 0;
 				int maxi = 0;
-				for (int t = 0; t < 8; t++)
+				for (int t = 0; t < 36; t++)
 				{
 					if (histo1[t] > max)
 					{
@@ -1815,33 +2037,55 @@ descripter* GenerateDescripter(int* Harris, int width, int height, int* Direc, B
 					}
 				}
 				direc = maxi;
-
+				KeyPoints[PointCount].x = i;
+				KeyPoints[PointCount].y = j;
 				//Rotating image
 				KeyPoints[PointCount].direc = direc;
-				double theta = direc*PI / 4;
-				BMP* tmpbmp = AMRotation(bmp, theta);
+				double theta = direc*PI / 18 + PI / 36;
+				BMP* bmpt;
+				BMP* tmpbmp = AMRotationParts(bmp, i, j, area, -theta, &bmpt);
 				//Convert to Greyscale
 				RGBtoBW(tmpbmp);
+				/*
 				//Compute some important coefficient
 				double cost = cos(theta);
 				double sint = sin(theta);
-				double pre_width = BMP_GetWidth(bmp);
-				double pre_height = BMP_GetHeight(bmp);
+				double pre_width = BMP_GetWidth(bmpt);
+				double pre_height = BMP_GetHeight(bmpt);
 				//Analysing size of new picture;
 				double max_x = maximum((pre_width*cost - pre_height*sint), -pre_height*sint, 0.1 * 0, pre_width*cost);
 				double min_x = minimum((pre_width*cost - pre_height*sint), -pre_height*sint, 0.1 * 0, pre_width*cost);
 				double max_y = maximum((pre_width*sint + pre_height*cost), pre_height*cost, 0.1 * 0, pre_width*sint);
 				double min_y = minimum((pre_width*sint + pre_height*cost), pre_height*cost, 0.1 * 0, pre_width*sint);
+				*/
 				//Calculating new coordinates
-				int newx = (int)(cost*i - sint*j - min_x);
-				int newy = (int)(sint*i + cost*j - min_y);
+				//int newx = (int)(cost*area - sint*area - min_x);
+				//int newy = (int)(sint*area + cost*area - min_y);
+				int newwid = BMP_GetWidth(tmpbmp);
+				int newhei = BMP_GetHeight(tmpbmp);
+				int newx = (int)(newwid / 2);
+				int newy = (int)(newwid / 2);
 				//Calculating Gradients
-				double *GrX = malloc(sizeof(double) * 16 * 16);
-				double *GrY = malloc(sizeof(double) * 16 * 16);
-				int *Dre = malloc(sizeof(int) * 16 * 16);
-				for (int tx = 0; tx < 16; tx++)
+				double *GrX = malloc(sizeof(double) * area * area);
+				double *GrY = malloc(sizeof(double) * area * area);
+				int *Dre = malloc(sizeof(int) * area * area);
+				////////////////////////////////////////////////////////////////////////////////////////////////////////////
+				/*BMP* tmbmp=BMP_Create(area, area, 24);
+				for (int ix = 0; ix < area; ix++)
 				{
-					for (int ty = 0; ty < 16; ty++)
+					for (int jy = 0; jy < area; jy++)
+					{
+						int r, g, b;
+						BMP_GetPixelRGB(tmpbmp, newx + ix - area / 2, newy + jy - area / 2, &r, &g, &b);
+						BMP_SetPixelRGB(tmbmp, ix, jy, r, g, b);
+					}
+				}
+				BMP_WriteFile(tmbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\tmbm.bmp");
+				BMP_Free(tmbmp);*/
+				////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+				for (int tx = 0; tx < area; tx++)
+				{
+					for (int ty = 0; ty < area; ty++)
 					{
 						int SobelY[3][3] = { { -1,0,1 },{ -2,0,2 },{ -1,0,1 } };
 						int SobelX[3][3] = { { -1,-2,-1 },{ 0,0,0 },{ 1,2,1 } };
@@ -1851,62 +2095,62 @@ descripter* GenerateDescripter(int* Harris, int width, int height, int* Direc, B
 							for (int iY = 0; iY < 3; iY++)
 							{
 								UCHAR r = 0, g = 0, b = 0;
-								BMP_GetPixelRGB(bmp, newx + tx + iX - 8, newy + ty + iY - 8, &r, &g, &b);
+								BMP_GetPixelRGB(tmpbmp, newx + tx + iX - area / 2, newy + ty + iY - area / 2, &r, &g, &b);
 								sumX += r*SobelX[iX][iY];
 								sumY += r*SobelY[iX][iY];
 							}
 						}
-						GrX[tx + ty*16] = sumX;
-						GrY[tx + ty*16] = sumY;
+						GrX[tx + ty*area] = sumX;
+						GrY[tx + ty*area] = sumY;
 						double theta = 0;
-						theta = atan2(GrY[tx + ty*16], GrX[tx + ty*16]);
-						//Angle rounding ( long code here )
+						theta = atan2(GrY[tx + ty*area], GrX[tx + ty*area]);
+						//Angle rounding( long code here )
 						{
 							if (theta < PI / 8 && theta >= -PI / 8)
 							{
-								Dre[tx + ty*16] = 0; // 0 for East
+								Dre[tx + ty*area] = 0; // 0 for East
 							}
 							else
 							{
 								if (theta >= PI / 8 && theta < PI * 3 / 8)
 								{
-									Dre[tx + ty*16] = 1;// 1 for North-East
+									Dre[tx + ty*area] = 1;// 1 for North-East
 								}
 								else
 								{
 									if (theta >= PI * 3 / 8 && theta < PI * 5 / 8)
 									{
-										Dre[tx + ty*16] = 2;// 2 for North
+										Dre[tx + ty*area] = 2;// 2 for North
 									}
 									else
 									{
 										if (theta >= PI * 5 / 8 && theta < PI * 7 / 8)
 										{
-											Dre[tx + ty*16] = 3;// 3 for North-West
+											Dre[tx + ty*area] = 3;// 3 for North-West
 										}
 										else
 										{
 											if (theta >= PI * 7 / 8 || theta < -PI * 7 / 8)
 											{
-												Dre[tx + ty*16] = 4;// 4 for West
+												Dre[tx + ty*area] = 4;// 4 for West
 											}
 											else
 											{
 												if (theta >= -PI * 7 / 8 && theta < -PI * 5 / 8)
 												{
-													Dre[tx + ty*16] = 5;// 5 for South-West
+													Dre[tx + ty*area] = 5;// 5 for South-West
 												}
 												else
 												{
 													if (theta >= -PI * 5 / 8 && theta < -PI * 3 / 8)
 													{
-														Dre[tx + ty*16] = 6;// 6 for South
+														Dre[tx + ty*area] = 6;// 6 for South
 													}
 													else
 													{
 														if (theta >= -PI * 3 / 8 && theta < -PI * 1 / 8)
 														{
-															Dre[tx + ty*16] = 7;// 7 for South-East
+															Dre[tx + ty*area] = 7;// 7 for South-East
 														}
 													}
 												}
@@ -1918,96 +2162,53 @@ descripter* GenerateDescripter(int* Harris, int width, int height, int* Direc, B
 						}
 					}
 				}
-				double* gaussmatrix = malloc(sizeof(double) * 16 * 16);
-				double sum = GaussFunction(5, 16, gaussmatrix);
-				for (int t = 0; t < 16; t++)
+				double* gaussmatrix = malloc(sizeof(double) * area * area);
+				double sum = GaussFunction(1.0*area / 4, area, gaussmatrix);
+				for (int t = 0; t < area; t++)
 				{
-					for (int l = 0; l < 16; l++)
+					for (int l = 0; l < area; l++)
 					{
-						GrX[t + l * 16] *= gaussmatrix[t + l * 16];
-						GrX[t + l * 16] /= sum;
-						GrY[t + l * 16] *= gaussmatrix[t + l * 16];
-						GrY[t + l * 16] /= sum;
+						GrX[t + l * area] *= gaussmatrix[t + l * area];
+						//GrX[t + l * area] /= sum;
+						GrY[t + l * area] *= gaussmatrix[t + l * area];
+						//GrY[t + l * area] /= sum;
 					}
 				}
 				//Generate 128-d vector
 				//Calculate Histogram
-				//First 8*8
-				double histo[8] = { 0 };
-				for (int tk = 0; tk < 8; tk++)
+				for (int lx = 0; lx < 4; lx++)
 				{
-					for (int tl = 0; tl < 8; tl++)
+					for (int ly = 0; ly < 4; ly++)
 					{
-						histo[Dre[tk + tl * 16]] += sqrt(GrX[tk + tl * 16] * GrX[tk + tl * 16] + GrY[tk + tl * 16] * GrY[tk + tl * 16]);
+						double histo[8] = { 0 };
+						for (int tk = lx*(area / 4); tk < (lx + 1)*(area / 4); tk++)
+						{
+							for (int tl = ly*(area / 4); tl < (ly + 1)*(area / 4); tl++)
+							{
+								histo[Dre[tk + tl * area]] += sqrt(GrX[tk + tl * area] * GrX[tk + tl * area] + GrY[tk + tl * area] * GrY[tk + tl * area]);
+							}
+						}
+						double isum = 0;
+						for (int tmp = 0; tmp < 8; tmp++)
+						{
+							isum += histo[tmp] * histo[tmp];
+						}
+						for (int tmp = 0; tmp < 8; tmp++)
+						{
+							if (isum != 0) histo[tmp] /= sqrt(isum);
+							KeyPoints[PointCount].vector[tmp + 8 * (lx + ly * 4)] = histo[tmp];
+						}
 					}
 				}
-				double isum = 0;
-				for (int tmp = 0; tmp <8; tmp++)
+
+				//////////////////////////////////////////////////////////
+				/*printf("P%d: ", PointCount + 1);
+				for (int j = 0; j < 128; j++)
 				{
-					isum += histo[tmp]*histo[tmp];
+					printf("%-6.3f", KeyPoints[PointCount].vector[j]);
 				}
-				for (int tmp = 0; tmp <8; tmp++)
-				{
-					if(isum!=0) histo[tmp] /= sqrt(isum);
-					KeyPoints[PointCount].vector[tmp] = histo[tmp];
-				}
-				//Second 8*8
-				memset(histo, 0, sizeof(double) * 8);
-				for (int tk = 8; tk < 16; tk++)
-				{
-					for (int tl = 0; tl < 8; tl++)
-					{
-						histo[Dre[tk + tl * 16]] += sqrt(GrX[tk + tl * 16] * GrX[tk + tl * 16] + GrY[tk + tl * 16] * GrY[tk + tl * 16]);
-					}
-				}
-				isum = 0;
-				for (int tmp = 0; tmp <8; tmp++)
-				{
-					isum += histo[tmp]*histo[tmp];
-				}
-				for (int tmp = 0; tmp <8; tmp++)
-				{
-					if (isum != 0) histo[tmp] /= sqrt(isum);
-					KeyPoints[PointCount].vector[tmp + 8] = histo[tmp];
-				}
-				//Third 8*8
-				memset(histo, 0, sizeof(double) * 8);
-				for (int tk = 0; tk < 8; tk++)
-				{
-					for (int tl = 8; tl < 16; tl++)
-					{
-						histo[Dre[tk + tl * 16]] += sqrt(GrX[tk + tl * 16] * GrX[tk + tl * 16] + GrY[tk + tl * 16] * GrY[tk + tl * 16]);
-					}
-				}
-				isum = 0;
-				for (int tmp = 0; tmp <8; tmp++)
-				{
-					isum += histo[tmp] * histo[tmp];
-				}
-				for (int tmp = 0; tmp <8; tmp++)
-				{
-					if (isum != 0) histo[tmp] /= sqrt(isum);
-					KeyPoints[PointCount].vector[tmp + 16] = histo[tmp];
-				}
-				//Fourth 8*8
-				memset(histo, 0, sizeof(double) * 8);
-				for (int tk = 8; tk < 16; tk++)
-				{
-					for (int tl = 8; tl < 16; tl++)
-					{
-						histo[Dre[tk + tl * 16]] += sqrt(GrX[tk + tl * 16] * GrX[tk + tl * 16] + GrY[tk + tl * 16] * GrY[tk + tl * 16]);
-					}
-				}
-				isum = 0;
-				for (int tmp = 0; tmp <8; tmp++)
-				{
-					isum += histo[tmp] * histo[tmp];
-				}
-				for (int tmp = 0; tmp <8; tmp++)
-				{
-					if (isum != 0) histo[tmp] /= sqrt(isum);
-					KeyPoints[PointCount].vector[tmp + 24] = histo[tmp];
-				}
+				printf("\n");*/
+				//////////////////////////////////////////////////////////
 				PointCount++;
 				//free
 				free(GrX);
@@ -2019,8 +2220,141 @@ descripter* GenerateDescripter(int* Harris, int width, int height, int* Direc, B
 
 		}
 	}
+	printf("\n\n");
 	*point = PointCount;
 	return KeyPoints;
+}
+
+pointpair* GeneratePointpair(BMP* img1, BMP* img2, double thrhld,int *paircount)
+{
+	int img1count, img2count;
+	int flipped = 0;
+	pointpair relation;
+	descripter* img1des = HarrisCorner(img1, thrhld, &img1count);
+	descripter* img2des = HarrisCorner(img2, thrhld, &img2count);
+	if (img1count > img2count) //swap img1 and img2
+	{
+		int tmp = img1count;
+		img1count = img2count;
+		img2count = tmp;
+		BMP* tmpp = img1;
+		img1 = img2;
+		img2 = tmpp;
+		descripter* tmpdes = img1des;
+		img1des = img2des;
+		img2des = tmpdes;
+		flipped = 1;
+	}
+	*paircount = 0;
+	pointpair* points = malloc(sizeof(pointpair)*img1count);
+	memset(points, 0, sizeof(pointpair)*img1count);
+	int* flagimg2 = malloc(sizeof(int)*img2count);
+	memset(flagimg2, 0, sizeof(int)*img2count);
+	for (int i = 0; i < img1count; i++)
+	{
+		double mindist = 1e50;
+		double semindist = 1e50;
+		int minj = -1;
+		for (int j = 0; j < img2count; j++)
+		{
+			if (flagimg2[j] == 0)
+			{
+				double dist = distof128(img1des[i], img2des[j]);
+				if (dist < mindist)
+				{
+					semindist = mindist;
+					mindist = dist;
+					minj = j;
+				}
+			}
+		}
+		if (mindist/semindist <= 0.8)
+		{
+			flagimg2[minj] = 1;
+			if (flipped == 0)
+			{
+				(points[*paircount].p1).x = img1des[i].x;
+				(points[*paircount].p1).y = img1des[i].y;
+				(points[*paircount].p2).x = img2des[minj].x;
+				(points[*paircount].p2).y = img2des[minj].y;
+			}
+			else
+			{
+				(points[*paircount].p2).x = img1des[i].x;
+				(points[*paircount].p2).y = img1des[i].y;
+				(points[*paircount].p1).x = img2des[minj].x;
+				(points[*paircount].p1).y = img2des[minj].y;
+			}
+			(*paircount)++;
+		}
+	}
+	//Free
+	free(img1des);
+	free(img2des);
+	return points;
+}
+
+BMP* ImageStitching(BMP* img1, BMP* img2, double thrhld)
+{
+	int wid1 = BMP_GetWidth(img1);
+	int wid2 = BMP_GetWidth(img2);
+	int hei1 = BMP_GetHeight(img1);
+	int hei2 = BMP_GetHeight(img2);
+	int depth = BMP_GetDepth(img1);
+	int paircount = 0;
+	pointpair* points = GeneratePointpair(img1, img2, thrhld, &paircount);
+	BMP* newbmp = BMP_Create(wid1 + wid2, max(hei1, hei2), depth);
+	//Draw img1
+	for (int i = 0; i < wid1; i++)
+	{
+		for (int j = 0; j < hei1; j++)
+		{
+			UCHAR r=0, g=0, b=0;
+			BMP_GetPixelRGB(img1, i, j, &r, &g, &b);
+			BMP_SetPixelRGB(newbmp, i, j, r, g, b);
+		}
+	}
+	//Draw img2
+	for (int i = wid1; i < wid1+wid2; i++)
+	{
+		for (int j = 0; j < hei2; j++)
+		{
+			UCHAR r = 0, g = 0, b = 0;
+			BMP_GetPixelRGB(img2, i-wid1, j, &r, &g, &b);
+			BMP_SetPixelRGB(newbmp, i, j, r, g, b);
+		}
+	}
+	//Draw line
+	for (int i = 0; i < paircount; i++)
+	{
+		DrawLine(newbmp, (points[i].p1).x, (points[i].p1).y, (points[i].p2).x + wid1, (points[i].p2).y, 0, 255, 0);
+	}
+	//Free
+	free(points);
+	return newbmp;
+}
+
+void DrawLine(BMP* bmp, int inix, int iniy, int desx, int desy, int r, int g, int b)
+{
+	double disy = 1.0*(desy - iniy) / abs(desx - inix);
+	int dire = -1;
+	if (desx > inix) dire = 1;
+	double y = iniy;
+	for (int i = inix;i <=desx; i+=dire)
+	{
+		BMP_SetPixelRGB(bmp, i, (int)y, r, g, b);
+		y += disy;
+	}
+}
+
+double distof128(descripter desc1, descripter desc2) //distance of 36-d vector
+{
+	double dist = 0;
+	for (int i = 0; i < 128; i++)
+	{
+		dist += (desc1.vector[i] - desc2.vector[i])*(desc1.vector[i] - desc2.vector[i]);
+	}
+	return sqrt(dist);
 }
 
 int* NonMaximumSpr(double* img, int width, int height, int windowSize)
