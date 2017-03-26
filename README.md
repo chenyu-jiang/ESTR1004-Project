@@ -22,4 +22,11 @@ Current Functions:
 
 8.Edge detection (Sobel and Canny method)
 
-9.Harris Edge Detector
+9.Harris Corner Detector
+
+10. Basic Point Matching
+
+TO DO
+1. RANSAC
+2. Image Blending
+3. USM Sharpening
