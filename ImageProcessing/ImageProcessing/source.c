@@ -10,6 +10,8 @@
 
 #define PI 3.14159
 #define LOGE 2.71828
+#define MINSECTION 10
+#define POINTPAIR_THRHLD 0.65
 
 void RGBtoBW(BMP* bmp);
 void invert(BMP* bmp);
@@ -43,21 +45,21 @@ pointpair* GeneratePointpair(BMP* img1, BMP* img2, double thrhld, int *paircount
 int main()
 {
 	BMP *bmp, *bmp1;
-	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\lenna.bmp";
-	char filename1[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\lenna157.bmp";
+	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\mtn.bmp";
+	char filename1[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\mtnr.bmp";
 	bmp = BMP_ReadFile(filename);
 	bmp1 = BMP_ReadFile(filename1);
 	BMP_CHECK_ERROR(stderr, -1);
 	/////////////////////////////////////////////////////////////////////////
 	//Your code in between
 	char filepath[100] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\PointPair.bmp";
-	BMP* newbmp = ImageStitching(bmp, bmp1,9000000);
+	BMP* newbmp = ImageStitching(bmp, bmp1,1000000);
 	BMP_WriteFile(newbmp, filepath);
 	BMP_Free(newbmp);
-	newbmp = HarrisCornerDetector(bmp, 9000000);
+	newbmp = HarrisCornerDetector(bmp, 1000000);
 	BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\HarrisL.bmp");
 	BMP_Free(newbmp);
-	newbmp = HarrisCornerDetector(bmp1, 9000000);
+	newbmp = HarrisCornerDetector(bmp1, 1000000);
 	BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\HarrisR.bmp");
 	BMP_Free(newbmp);
 	/////////////////////////////////////////////////////////////////////////
@@ -1941,7 +1943,7 @@ BMP* HarrisCornerDetector(BMP* bmp, double thrhld)
 		}
 	}
 	//Non-maximum Supression
-	int *HarrisFin = NonMaximumSpr(CornerStr, width, height, 20);
+	int *HarrisFin = NonMaximumSpr(CornerStr, width, height, MINSECTION);
 	//Freeeeeee
 	free(GradX);
 	free(GradY);
@@ -2000,8 +2002,8 @@ descripter* GenerateDescripter(int* Harris, int width, int height,int* GradY,int
 	const int area = 16;
 	int PointCount = 0;
 	//Malloc Descriptor
-	descripter* KeyPoints = malloc(sizeof(descripter)*(height / 5 * width / 5));
-	memset(KeyPoints, 0, sizeof(descripter)*(height / 5 * width / 5));
+	descripter* KeyPoints = malloc(sizeof(descripter)*(height / MINSECTION * width / MINSECTION + 30));
+	memset(KeyPoints, 0, sizeof(descripter)*(height / MINSECTION * width / MINSECTION + 30));
 	for (int i = 0; i < width; i++)
 	{
 		for (int j = 0; j < height; j++)
@@ -2268,7 +2270,7 @@ pointpair* GeneratePointpair(BMP* img1, BMP* img2, double thrhld,int *paircount)
 				}
 			}
 		}
-		if (mindist/semindist <= 0.8)
+		if (mindist/semindist <=POINTPAIR_THRHLD)
 		{
 			flagimg2[minj] = 1;
 			if (flipped == 0)
@@ -2363,7 +2365,7 @@ int* NonMaximumSpr(double* img, int width, int height, int windowSize)
 	memset(ans, 0, sizeof(int)*width*height);
 	for (int i = 0; i < width/windowSize; i++)
 	{
-		for (int j = 0; j < width / windowSize; j++)
+		for (int j = 0; j < height / windowSize; j++)
 		{
 			double max = 0;
 			int maxpos = -1;
