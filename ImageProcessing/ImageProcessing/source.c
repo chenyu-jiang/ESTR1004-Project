@@ -45,15 +45,12 @@ pointpair* GeneratePointpair(BMP* img1, BMP* img2, double thrhld, int *paircount
 double determinant(double a11, double a12, double a13, double a21, double a22, double a23, double a31, double a32, double a33);
 affinematrix RANSACAffm(BMP* img1, BMP* img2, double thrhld, int times, double radius);
 pointpair* RANSACMatch(BMP* img1, BMP* img2, double thrhld, int* RANSACcount);
-int matchjudgement(affinematrix matrix, pointpair*naivepair, int paircount);//Judge how many point pairs has been matched under certain affine matrix;
+int matchjudgement(affinematrix matrix, pointpair*naivepair, int paircount, int* match);//Judge how many point pairs has been matched under certain affine matrix;
 
 
 int main()
 {
 	BMP *bmp, *bmp1;
-	char filename[] = "E:\\Lesson units\\ESTR 1004\\Project\\Naive\\ESTR1004-Project-master\\Test\\RANSAC\\computerL.bmp";
-	char filename1[] = "E:\\Lesson units\\ESTR 1004\\Project\\Naive\\ESTR1004-Project-master\\Test\\RANSAC\\computerR.bmp";
-=======
 	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\mtn.bmp";
 	char filename1[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\mtnr.bmp";
 	bmp = BMP_ReadFile(filename);
@@ -62,23 +59,12 @@ int main()
 	/////////////////////////////////////////////////////////////////////////
 	//Your code in between
 	srand(time(NULL));
-	char filepath[100] = "E:\\Lesson units\\ESTR 1004\\Project\\Naive\\ESTR1004-Project-master\\Test\\RANSAC\\computerMatch.bmp";
 	BMP* newbmp = ImageStitching(bmp, bmp1, 10000);
-	BMP_WriteFile(newbmp, filepath);
-	BMP_Free(newbmp);
-	newbmp = HarrisCornerDetector(bmp, 10000);
-	BMP_WriteFile(newbmp, "E:\\Lesson units\\ESTR 1004\\Project\\Naive\\ESTR1004-Project-master\\Test\\RANSAC\\computer_HarrisL.bmp");
-	BMP_Free(newbmp);
-	newbmp = HarrisCornerDetector(bmp1, 10000);
-	BMP_WriteFile(newbmp, "E:\\Lesson units\\ESTR 1004\\Project\\Naive\\ESTR1004-Project-master\\Test\\RANSAC\\computer_HarrisR.bmp");
 	char filepath[100] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\PointPair.bmp";
-	BMP* newbmp = ImageStitching(bmp, bmp1,1000000);
 	BMP_WriteFile(newbmp, filepath);
-	BMP_Free(newbmp);
-	newbmp = HarrisCornerDetector(bmp, 1000000);
+	newbmp = HarrisCornerDetector(bmp, 10000);
 	BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\HarrisL.bmp");
-	BMP_Free(newbmp);
-	newbmp = HarrisCornerDetector(bmp1, 1000000);
+	newbmp = HarrisCornerDetector(bmp1, 10000);
 	BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\HarrisR.bmp");
 	BMP_Free(newbmp);
 	/////////////////////////////////////////////////////////////////////////
@@ -1496,6 +1482,7 @@ double S(double a) {
 	if (a == 0)return 1;
 	else return sin(PI*a) / (PI*a);
 }
+
 double huidu(double row, double column, BMP* bmp)
 {
 	int width = BMP_GetWidth(bmp);
@@ -1543,6 +1530,7 @@ double huidu(double row, double column, BMP* bmp)
 	return (1 - u)*(1 - v)*B[0][0] + u*(1 - v)*B[1][0] + (1 - u)*v*B[0][1] + u*v*B[1][1];
 
 }
+
 int huidu2(double row, double column, BMP* bmp)
 {
 	int width = BMP_GetWidth(bmp);
@@ -1576,6 +1564,7 @@ int huidu2(double row, double column, BMP* bmp)
 	}
 	return e/320;
 }
+
 BMP* DINTRotation(BMP* bmp, double theta)
 {
 	RGBtoBW(bmp);
@@ -2415,7 +2404,6 @@ double determinant(double a11, double a12, double a13, double a21, double a22, d
 	double result = a11*a22*a33 + a12*a23*a31 + a21*a32*a13 - a13*a22*a31 - a12*a21*a33 - a11*a23*a32;
 	return result;
 }
-
 
 int matchjudgement(affinematrix matrix, pointpair*naivepair, int paircount, int* match)
 {
