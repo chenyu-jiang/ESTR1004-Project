@@ -27,10 +27,9 @@ Current Functions:
 
 10.Basic Point Matching
 
+11.Using RANSAC to find Affine Matrix
+
 TO DO
+1.Image Blending
 
-1.RANSAC
-
-2.Image Blending
-
-3.USM Sharpening
+2.USM Sharpening
