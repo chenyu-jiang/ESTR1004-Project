@@ -53,6 +53,9 @@ int main()
 	BMP *bmp, *bmp1;
 	char filename[] = "E:\\Lesson units\\ESTR 1004\\Project\\Naive\\ESTR1004-Project-master\\Test\\RANSAC\\computerL.bmp";
 	char filename1[] = "E:\\Lesson units\\ESTR 1004\\Project\\Naive\\ESTR1004-Project-master\\Test\\RANSAC\\computerR.bmp";
+=======
+	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\mtn.bmp";
+	char filename1[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\mtnr.bmp";
 	bmp = BMP_ReadFile(filename);
 	bmp1 = BMP_ReadFile(filename1);
 	BMP_CHECK_ERROR(stderr, -1);
@@ -68,6 +71,15 @@ int main()
 	BMP_Free(newbmp);
 	newbmp = HarrisCornerDetector(bmp1, 10000);
 	BMP_WriteFile(newbmp, "E:\\Lesson units\\ESTR 1004\\Project\\Naive\\ESTR1004-Project-master\\Test\\RANSAC\\computer_HarrisR.bmp");
+	char filepath[100] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\PointPair.bmp";
+	BMP* newbmp = ImageStitching(bmp, bmp1,1000000);
+	BMP_WriteFile(newbmp, filepath);
+	BMP_Free(newbmp);
+	newbmp = HarrisCornerDetector(bmp, 1000000);
+	BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\HarrisL.bmp");
+	BMP_Free(newbmp);
+	newbmp = HarrisCornerDetector(bmp1, 1000000);
+	BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\HarrisR.bmp");
 	BMP_Free(newbmp);
 	/////////////////////////////////////////////////////////////////////////
 	BMP_Free(bmp);
