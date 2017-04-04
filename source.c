@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "Descriptor.h"
+#include <time.h>
 
 //#define DEBUG
 // REGARDS TO http://qdbmp.sourceforge.net/
@@ -12,6 +13,8 @@
 #define LOGE 2.71828
 #define MINSECTION 10
 #define POINTPAIR_THRHLD 0.65
+#define RANSAC_RADIUS 25
+#define RANSAC_TIMES 1000000
 
 void RGBtoBW(BMP* bmp);
 void invert(BMP* bmp);
@@ -40,26 +43,30 @@ double distof128(descripter desc1, descripter desc2);
 void DrawLine(BMP* bmp, int inix, int iniy, int desx, int desy, int r, int g, int b);
 BMP* ImageStitching(BMP* img1, BMP* img2, double thrhld);
 pointpair* GeneratePointpair(BMP* img1, BMP* img2, double thrhld, int *paircount);
+double determinant(double a11, double a12, double a13, double a21, double a22, double a23, double a31, double a32, double a33);
+affinematrix RANSACAffm(BMP* img1, BMP* img2, double thrhld, int times, double radius);
+pointpair* RANSACMatch(BMP* img1, BMP* img2, double thrhld, int* RANSACcount);
+int matchjudgement(affinematrix matrix, pointpair *naivepair, int paircount, int* match);//Judge how many point pairs has been matched under certain affine matrix;
 
 
 int main()
 {
 	BMP *bmp, *bmp1;
-	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\mtn.bmp";
-	char filename1[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\mtnr.bmp";
+	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\rm3.bmp";
+	char filename1[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\rm4.bmp";
 	bmp = BMP_ReadFile(filename);
+	BMP_CHECK_ERROR(stderr, -1);
 	bmp1 = BMP_ReadFile(filename1);
 	BMP_CHECK_ERROR(stderr, -1);
 	/////////////////////////////////////////////////////////////////////////
 	//Your code in between
+	srand(time(NULL));
+	BMP* newbmp = ImageStitching(bmp, bmp1, 200000);
 	char filepath[100] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\PointPair.bmp";
-	BMP* newbmp = ImageStitching(bmp, bmp1,1000000);
 	BMP_WriteFile(newbmp, filepath);
-	BMP_Free(newbmp);
-	newbmp = HarrisCornerDetector(bmp, 1000000);
+	newbmp = HarrisCornerDetector(bmp, 200000);
 	BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\HarrisL.bmp");
-	BMP_Free(newbmp);
-	newbmp = HarrisCornerDetector(bmp1, 1000000);
+	newbmp = HarrisCornerDetector(bmp1, 200000);
 	BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\HarrisR.bmp");
 	BMP_Free(newbmp);
 	/////////////////////////////////////////////////////////////////////////
@@ -1477,6 +1484,7 @@ double S(double a) {
 	if (a == 0)return 1;
 	else return sin(PI*a) / (PI*a);
 }
+
 double huidu(double row, double column, BMP* bmp)
 {
 	int width = BMP_GetWidth(bmp);
@@ -1524,6 +1532,7 @@ double huidu(double row, double column, BMP* bmp)
 	return (1 - u)*(1 - v)*B[0][0] + u*(1 - v)*B[1][0] + (1 - u)*v*B[0][1] + u*v*B[1][1];
 
 }
+
 int huidu2(double row, double column, BMP* bmp)
 {
 	int width = BMP_GetWidth(bmp);
@@ -1557,6 +1566,7 @@ int huidu2(double row, double column, BMP* bmp)
 	}
 	return e/320;
 }
+
 BMP* DINTRotation(BMP* bmp, double theta)
 {
 	RGBtoBW(bmp);
@@ -2304,7 +2314,8 @@ BMP* ImageStitching(BMP* img1, BMP* img2, double thrhld)
 	int hei2 = BMP_GetHeight(img2);
 	int depth = BMP_GetDepth(img1);
 	int paircount = 0;
-	pointpair* points = GeneratePointpair(img1, img2, thrhld, &paircount);
+	pointpair* points = RANSACMatch(img1, img2, thrhld, &paircount);
+	//pointpair* points = GeneratePointpair(img1, img2, thrhld, &paircount);
 	BMP* newbmp = BMP_Create(wid1 + wid2, max(hei1, hei2), depth);
 	//Draw img1
 	for (int i = 0; i < wid1; i++)
@@ -2388,4 +2399,197 @@ int* NonMaximumSpr(double* img, int width, int height, int windowSize)
 		}
 	}
 	return ans;
+}
+
+
+double determinant(double a11, double a12, double a13, double a21, double a22, double a23, double a31, double a32, double a33)
+{
+	double result = a11*a22*a33 + a12*a23*a31 + a21*a32*a13 - a13*a22*a31 - a12*a21*a33 - a11*a23*a32;
+	return result;
+}
+
+int matchjudgement(affinematrix matrix, pointpair*naivepair, int paircount, int* match)
+{
+	int result = 0;
+	for (int i = 0; i < paircount; i++)
+	{
+		//Affine Transformation;
+		point p;
+		p.x = (matrix.A1)*(naivepair[i].p1.x) + (matrix.B1)*(naivepair[i].p1.y) + matrix.e;
+		p.y = matrix.A2*naivepair[i].p1.x + matrix.B2*naivepair[i].p1.y + matrix.f;
+		if (((naivepair[i].p2).x - p.x)*((naivepair[i].p2).x - p.x) + ((naivepair[i].p2).y - p.y)*((naivepair[i].p2).y - p.y) < RANSAC_RADIUS*RANSAC_RADIUS && ((naivepair[i].p2).x - p.x)*((naivepair[i].p2).x - p.x) + ((naivepair[i].p2).y - p.y)*((naivepair[i].p2).y - p.y) >= 0)
+		{
+			result++;
+			match[i] = 1;
+		}
+		else
+		{
+			match[i] = 0;
+		}
+	}
+
+	return result;
+}
+
+affinematrix RANSACAffm(BMP* img1, BMP* img2, double thrhld, int times, double radius)
+{
+	affinematrix best_affm;
+	best_affm.A1 = 0;
+	best_affm.A2 = 0;
+	best_affm.B1 = 0;
+	best_affm.B2 = 0;
+	best_affm.e = 0;
+	best_affm.f = 0;
+	int num_of_match = 0;
+	int count = 0;
+	int paircount = 0;
+	affinematrix result = best_affm;
+	pointpair* naivepair = GeneratePointpair(img1, img2, thrhld, paircount);
+	//Initial 3 point pairs;
+	for (int i = 0; i < times; i++)
+	{
+		int initialpair[3] = { -1,-1,-1 };
+
+		initialpair[0] = rand() % paircount;
+		initialpair[1] = rand() % paircount;
+		while (initialpair[1] == initialpair[0] && initialpair[1] == -1)
+			initialpair[1] = rand() % paircount;
+		initialpair[2] = rand() % paircount;
+		while (initialpair[2] == initialpair[0] || initialpair[2] == initialpair[1] && initialpair[2] == -1)
+			initialpair[2] = rand() % paircount;
+
+		pointpair pair1 = naivepair[initialpair[0]];
+		pointpair pair2 = naivepair[initialpair[1]];
+		pointpair pair3 = naivepair[initialpair[2]];
+
+		//Compute the model affine matrix;
+		/*double D1 = determinant(pair1.p1.x, pair1.p1.y, 1, pair2.p1.x, pair2.p1.y, 1, pair3.p1.x, pair3.p1.y, 1);
+		if (D1 != 0)
+		{
+			best_affm.A1 = determinant(pair1.p2.x, pair1.p1.y, 1, pair2.p2.x, pair2.p1.y, 1, pair3.p2.x, pair3.p1.y, 1) / D1;
+			best_affm.B1 = determinant(pair1.p1.x, pair1.p2.x, 1, pair2.p1.x, pair2.p2.x, 1, pair3.p1.x, pair3.p2.x, 1) / D1;
+			best_affm.e = determinant(pair1.p1.x, pair1.p2.y, pair1.p2.x, pair2.p1.x, pair2.p2.y, pair2.p2.x, pair3.p1.x, pair3.p2.y, pair3.p2.x) / D1;
+			best_affm.A2 = determinant(pair1.p2.y, pair1.p1.y, 1, pair2.p2.y, pair2.p1.y, 1, pair3.p2.y, pair3.p1.y, 1) / D1;
+			best_affm.B2 = determinant(pair1.p1.x, pair1.p2.y, 1, pair2.p1.x, pair2.p2.y, 1, pair3.p1.x, pair3.p2.y, 1) / D1;
+			best_affm.f = determinant(pair1.p1.x, pair1.p1.y, pair1.p2.y, pair2.p1.x, pair2.p1.y, pair2.p2.y, pair3.p1.x, pair3.p1.y, pair3.p2.y) / D1;
+		}*/
+
+		double D1 = determinant(pair1.p1.x, pair1.p1.y, 1, pair2.p1.x, pair2.p1.y, 1, pair3.p1.x, pair3.p1.y, 1);
+		if (D1 != 0)
+		{
+		best_affm.A1 = determinant(pair1.p2.x, pair1.p1.y, 1, pair2.p2.x, pair2.p1.y, 1, pair3.p2.x, pair3.p1.y, 1) / D1;
+		best_affm.B1 = determinant(pair1.p1.x, pair1.p2.x, 1, pair2.p1.x, pair2.p2.x, 1, pair3.p1.x, pair3.p2.x, 1) / D1;
+		best_affm.e = determinant(pair1.p1.x, pair1.p1.y, pair1.p2.x, pair2.p1.x, pair2.p1.y, pair2.p2.x, pair3.p1.x, pair3.p1.y, pair3.p2.x) / D1;
+		best_affm.A2 = determinant(pair1.p2.y, pair1.p1.y, 1, pair2.p2.y, pair2.p1.y, 1, pair3.p2.y, pair3.p1.y, 1) / D1;
+		best_affm.B2 = determinant(pair1.p1.x, pair1.p2.y, 1, pair2.p1.x, pair2.p2.y, 1, pair3.p1.x, pair3.p2.y, 1) / D1;
+		best_affm.f = determinant(pair1.p1.x, pair1.p1.y, pair1.p2.y, pair2.p1.x, pair2.p1.y, pair2.p2.y, pair3.p1.x, pair3.p1.y, pair3.p2.y) / D1;
+		}
+
+		//Compute the number of points successfully matched;
+		if ((best_affm.A1)*(best_affm.A1) + (best_affm.A2) *(best_affm.A2) + (best_affm.B1) *(best_affm.B1) + (best_affm.B2) *(best_affm.B2) + (best_affm.e) *(best_affm.e) + (best_affm.f) *(best_affm.f) == 0)
+			continue;
+		else
+		{
+			int* match = malloc(sizeof(int)*(paircount));
+			num_of_match = matchjudgement(best_affm, naivepair, paircount, match);
+			free(match);
+		}
+
+		//Update the affm;
+		if (num_of_match > count)
+		{
+			count = num_of_match;
+			result = best_affm;
+		}
+	}
+
+	free(naivepair);
+	return result;
+}
+
+pointpair* RANSACMatch(BMP* img1, BMP* img2, double thrhld, int* RANSACcount)
+{
+	affinematrix best_affm;
+	best_affm.A1 = 0;
+	best_affm.A2 = 0;
+	best_affm.B1 = 0;
+	best_affm.B2 = 0;
+	best_affm.e = 0;
+	best_affm.f = 0;
+	int num_of_match = 0;
+	int count = 0;
+	int paircount = 0;
+	affinematrix result;
+	pointpair* naivepair = GeneratePointpair(img1, img2, thrhld, &paircount);
+	int* match = malloc(sizeof(int)*(paircount));
+
+	//Initial 3 point pairs;
+	for (int i = 0; i < RANSAC_TIMES; i++)
+	{
+		int initialpair[3] = { -1,-1,-1 };
+
+		initialpair[0] = rand() % paircount;
+		initialpair[1] = rand() % paircount;
+		while (initialpair[1] == initialpair[0] && initialpair[1] == -1)
+			initialpair[1] = rand() % paircount;
+		initialpair[2] = rand() % paircount;
+		while (initialpair[2] == initialpair[0] || initialpair[2] == initialpair[1] && initialpair[2] == -1)
+			initialpair[2] = rand() % paircount;
+
+		pointpair pair1 = naivepair[initialpair[0]];
+		pointpair pair2 = naivepair[initialpair[1]];
+		pointpair pair3 = naivepair[initialpair[2]];
+
+		//Compute the model affine matrix;
+		/*double D1 = determinant(pair1.p1.x, pair1.p1.y, 1, pair2.p1.x, pair2.p1.y, 1, pair3.p1.x, pair3.p1.y, 1);
+		if (D1 != 0)
+		{
+			best_affm.A1 = determinant(pair1.p2.x, pair1.p1.y, 1, pair2.p2.x, pair2.p1.y, 1, pair3.p2.x, pair3.p1.y, 1) / D1;
+			best_affm.B1 = determinant(pair1.p1.x, pair1.p2.x, 1, pair2.p1.x, pair2.p2.x, 1, pair3.p1.x, pair3.p2.x, 1) / D1;
+			best_affm.e = determinant(pair1.p1.x, pair1.p2.y, pair1.p2.x, pair2.p1.x, pair2.p2.y, pair2.p2.x, pair3.p1.x, pair3.p2.y, pair3.p2.x) / D1;
+			best_affm.A2 = determinant(pair1.p2.y, pair1.p1.y, 1, pair2.p2.y, pair2.p1.y, 1, pair3.p2.y, pair3.p1.y, 1) / D1;
+			best_affm.B2 = determinant(pair1.p1.x, pair1.p2.y, 1, pair2.p1.x, pair2.p2.y, 1, pair3.p1.x, pair3.p2.y, 1) / D1;
+			best_affm.f = determinant(pair1.p1.x, pair1.p1.y, pair1.p2.y, pair2.p1.x, pair2.p1.y, pair2.p2.y, pair3.p1.x, pair3.p1.y, pair3.p2.y) / D1;
+		}*/
+
+		double D1 = determinant(pair1.p1.x, pair1.p1.y, 1, pair2.p1.x, pair2.p1.y, 1, pair3.p1.x, pair3.p1.y, 1);
+		if (D1 != 0)
+		{
+			best_affm.A1 = determinant(pair1.p2.x, pair1.p1.y, 1, pair2.p2.x, pair2.p1.y, 1, pair3.p2.x, pair3.p1.y, 1) / D1;
+			best_affm.B1 = determinant(pair1.p1.x, pair1.p2.x, 1, pair2.p1.x, pair2.p2.x, 1, pair3.p1.x, pair3.p2.x, 1) / D1;
+			best_affm.e = determinant(pair1.p1.x, pair1.p1.y, pair1.p2.x, pair2.p1.x, pair2.p1.y, pair2.p2.x, pair3.p1.x, pair3.p1.y, pair3.p2.x) / D1;
+			best_affm.A2 = determinant(pair1.p2.y, pair1.p1.y, 1, pair2.p2.y, pair2.p1.y, 1, pair3.p2.y, pair3.p1.y, 1) / D1;
+			best_affm.B2 = determinant(pair1.p1.x, pair1.p2.y, 1, pair2.p1.x, pair2.p2.y, 1, pair3.p1.x, pair3.p2.y, 1) / D1;
+			best_affm.f = determinant(pair1.p1.x, pair1.p1.y, pair1.p2.y, pair2.p1.x, pair2.p1.y, pair2.p2.y, pair3.p1.x, pair3.p1.y, pair3.p2.y) / D1;
+		}
+
+		//Compute the number of points successfully matched;
+		if ((best_affm.A1) == 0 && (best_affm.A2) == 0 && (best_affm.B1) == 0 && (best_affm.B2) == 0 && (best_affm.e) == 0 && (best_affm.f) == 0)
+			continue;
+		else
+			num_of_match = matchjudgement(best_affm, naivepair, paircount, match);
+		//Update the affm;
+		if (num_of_match > count)
+		{
+			count = num_of_match;
+			result = best_affm;
+		}
+
+	}
+
+	count = matchjudgement(result, naivepair, paircount, match);
+	pointpair* Matchedpairs = malloc(sizeof(pointpair)*count);
+	*RANSACcount = 0;
+	for (int k = 0; k < paircount; k++)
+	{
+		if (match[k] == 1)
+		{
+			Matchedpairs[*RANSACcount] = naivepair[k];
+			(*RANSACcount)++;
+		}
+	}
+
+	free(match);
+	free(naivepair);
+	return Matchedpairs;
 }
