@@ -29,7 +29,8 @@ Current Functions:
 
 11.Using RANSAC to find Affine Matrix
 
+12.USM sharpening
+
 TO DO
 1.Image Blending
 
-2.USM Sharpening
