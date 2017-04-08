@@ -29,3 +29,17 @@ typedef struct affinematrix {
 	double e;
 	double f;
 } affinematrix;
+
+typedef struct HomographicMatrix {
+	//[x']   [ H11, H12, H13 ][x]
+	//[y'] = [ H21, H22, H23 ][y]
+	//[1 ]   [ H31, H32,  1  ][p]
+	double H11;
+	double H12;
+	double H13;
+	double H21;
+	double H22;
+	double H23;
+	double H31;
+	double H32;
+} homographicmatrix;
