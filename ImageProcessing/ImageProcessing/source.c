@@ -13,8 +13,8 @@
 #define LOGE 2.71828
 #define MINSECTION 10
 #define POINTPAIR_THRHLD 0.65
-#define RANSAC_RADIUS 25
-#define RANSAC_TIMES 10000000
+#define RANSAC_RADIUS 10
+#define RANSAC_TIMES 1000000
 #define USM_GAUSSIAN_RADIUS 3//Gaussian radius in USM
 #define LAMDA 3 //lamda is a coefficient controling intensity of USM
 
@@ -64,17 +64,18 @@ point homographicTransform(point a, homographicmatrix matrix);
 int main()
 {
 	BMP *bmp, *bmp1;
-	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\book1.bmp";
-	char filename1[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\book2.bmp";
+	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\lgd1.bmp";
+	char filename1[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\lgd2.bmp";
 	bmp = BMP_ReadFile(filename);
 	BMP_CHECK_ERROR(stderr, -1);
 	bmp1 = BMP_ReadFile(filename1);
 	BMP_CHECK_ERROR(stderr, -1);
 	/////////////////////////////////////////////////////////////////////////
 	//Your code in between
-	srand(time(NULL));
+	//srand(time(NULL));
+	srand(1);
 	BMP* newbmp = ImageStitching(bmp, bmp1, 100000);
-	char filepath[100] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\Blendtest.bmp";
+	char filepath[100] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\Result.bmp";
 	BMP_WriteFile(newbmp, filepath);
 	/////////////////////////////////////////////////////////////////////////
 	BMP_Free(bmp);
@@ -2754,6 +2755,9 @@ BMP* ImageStitching(BMP* bmp1, BMP* bmp2, double thrhld)
 	int img1y0 = (int)minimum(zero_zero_tr.y, width_zero_tr.y, width_height_tr.y, zero_height_tr.y) - miny;
 	int img1hei = (int)maximum(zero_zero_tr.y, width_zero_tr.y, width_height_tr.y, zero_height_tr.y) - miny - img1y0;
 	int* img1 = malloc((img1hei+1)*(img1wid+1) * sizeof(int));
+	///////////////////////////////
+	BMP* imgbmp1 = BMP_Create(img1wid, img1hei, depth);
+	///////////////////////////////
 	memset(img1, -1, img1hei*img1wid * sizeof(int));
 	for (int i = 0; i < wid1; i++)
 	{
@@ -2765,12 +2769,14 @@ BMP* ImageStitching(BMP* bmp1, BMP* bmp2, double thrhld)
 			int y = p.y - (int)minimum(zero_zero_tr.y, width_zero_tr.y, width_height_tr.y, zero_height_tr.y);
 			int r=0, g=0, b=0;
 			BMP_GetPixelRGB(bmp1, i, j, &r, &g, &b);
-			img1[x + y*img1wid] = r;
+			BMP_SetPixelRGB(imgbmp1, x, y, r, g, b);
+			if (x + y*img1wid >= 0 && x + y*img1wid < img1wid*img1hei)	img1[x + y*img1wid] = r;
 		}
 	}
 	//////////////////////////////////////
-	//printf("Writing img1.bmp ...\n");
-	//BMP_WriteFile(img1, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\whattt.bmp");
+	printf("Writing img1.bmp ...\n");
+	BMP_WriteFile(imgbmp1, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\whattt.bmp");
+	BMP_Free(imgbmp1);
 	//////////////////////////////////////
 	//Transform img2
 	int img2x0 = -minx, img2y0 = -miny;
@@ -2924,6 +2930,17 @@ double GaussianElimination_determinant(double**matrix, int size)
 	int sign = 1;
 	for (int i = 0; i < size; i++)//(i+1)-th pivot;
 	{
+		///////////////////////////////////////////////////////
+		/*for (int i = 0; i < 8; i++)
+		{
+			for (int j = 0; j < 8; j++)
+			{
+				printf("%16.4f", matrix[i][j]);
+			}
+			printf("\n\n");
+		}
+		printf("\n\n");*/
+		//////////////////////////////////////////////////////
 		//Judge whether (i+1)-th pivot equals to 0;
 		if (matrix[i][i] == 0)//Interchange 2 rows;
 		{
@@ -3256,20 +3273,56 @@ pointpair* RANSACHomo_match(BMP* img1, BMP* img2, double thrhld, int* RANSACcoun
 			continue;
 		}
 
+		//Regenerate com_mat
+		for (int k = 0; k < 4; k++)
+		{
+			com_mat[2 * k][0] = pairs[k].p1.x;
+			com_mat[2 * k][1] = pairs[k].p1.y;
+			com_mat[2 * k][2] = 1;
+			com_mat[2 * k][3] = 0;
+			com_mat[2 * k][4] = 0;
+			com_mat[2 * k][5] = 0;
+			com_mat[2 * k][6] = -pairs[k].p1.x*pairs[k].p2.x;
+			com_mat[2 * k][7] = -pairs[k].p1.y*pairs[k].p2.x;
+			com_mat[2 * k + 1][0] = 0;
+			com_mat[2 * k + 1][1] = 0;
+			com_mat[2 * k + 1][2] = 0;
+			com_mat[2 * k + 1][3] = pairs[k].p1.x;
+			com_mat[2 * k + 1][4] = pairs[k].p1.y;
+			com_mat[2 * k + 1][5] = 1;
+			com_mat[2 * k + 1][6] = -pairs[k].p1.x*pairs[k].p2.y;
+			com_mat[2 * k + 1][7] = -pairs[k].p1.y*pairs[k].p2.y;
+		}
 
 		for (int k = 0; k < 8; k++)
 		{
-			double mid[8] = { 0,0,0,0,0,0,0,0 };
-			for (int var = 0; var < 8; var++)//...I can't find a good name for my variable...
+			//Generate tmp_mat
+			double** tmp_mat = malloc(sizeof(double*) * 8);
+			for (int k = 0; k < 8; k++)
+				tmp_mat[k] = malloc(sizeof(double) * 8);
+
+			for (int i = 0; i < 8; i++)
 			{
-				mid[var] = com_mat[var][k];
-				com_mat[var][k] = vec[var];
+				for (int j = 0; j < 8; j++)
+				{
+					tmp_mat[i][j] = com_mat[i][j];
+				}
 			}
 
-			entry_H[k] = GaussianElimination_determinant(com_mat, 8) / D1;
+			for (int var = 0; var < 8; var++)//...I can't find a good name for my variable...
+			{
+				tmp_mat[var][k] = vec[var];
+			}
 
-			for (int var = 0; var < 8; var++)//Back!
-				com_mat[var][k] = mid[var];
+			entry_H[k] = GaussianElimination_determinant(tmp_mat, 8) / D1;
+
+			//free generated matrix;
+			for (int k = 0; k < 8; k++)
+				free(tmp_mat[k]);
+			free(tmp_mat);
+
+			/*for (int var = 0; var < 8; var++)//Back!
+				com_mat[var][k] = mid[var];*/
 
 		}
 
@@ -3323,7 +3376,7 @@ pointpair* RANSACHomo_match(BMP* img1, BMP* img2, double thrhld, int* RANSACcoun
 			(*RANSACcount)++;
 		}
 	}
-	*transform = best;
+	*transform = result;
 	free(match);
 	free(naivepair);
 	return Matchedpairs;
