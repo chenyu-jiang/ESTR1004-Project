@@ -28,7 +28,7 @@ Current Functions:
 
 10.Basic Point Matching
 
-11.Using RANSAC to find Affine Matrix
+11.Using RANSAC to find Homography Matrix
 
 12.USM sharpening
 
