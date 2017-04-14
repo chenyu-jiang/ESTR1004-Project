@@ -1,6 +1,7 @@
 # ESTR1004-Project
 Image processing
-Using BMP library http://qdbmp.sourceforge.net/
+
+Using BMP library http://qdbmp.sourceforge.net/ to read BMP files
 
 Please commit changes to source.c
 
