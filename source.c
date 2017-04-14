@@ -59,13 +59,14 @@ int matchjudgement_homo(homographicmatrix matrix, pointpair* naivepair, int pair
 void* SeparateFrequency(int* img, int radius, int hei, int wid, int** highfre, int** lowfre);
 BMP* ImageBlending(int* img1, BMP* img2, int img1wid, int img1hei, int img1x0, int img1y0, int img2x0, int img2y0, BMP* newimg);
 point homographicTransform(point a, homographicmatrix matrix);
-
+void AreaInterpolation(homographicmatrix matrix, BMP* img1, int x, int y, double* R, double* G, double* B);
+BMP* ImageBlending_rgb(BMP* Originalbmp, BMP* img1, BMP* img2, int img1x0, int img1y0, int img2x0, int img2y0, BMP* newimg, homographicmatrix mat);
 
 int main()
 {
 	BMP *bmp, *bmp1;
-	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\lgd1.bmp";
-	char filename1[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\lgd2.bmp";
+	char filename[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\swmp1.bmp";
+	char filename1[] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\swmp2.bmp";
 	bmp = BMP_ReadFile(filename);
 	BMP_CHECK_ERROR(stderr, -1);
 	bmp1 = BMP_ReadFile(filename1);
@@ -74,9 +75,16 @@ int main()
 	//Your code in between
 	//srand(time(NULL));
 	srand(1);
-	BMP* newbmp = ImageStitching(bmp, bmp1, 100000);
-	char filepath[100] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\Result.bmp";
-	BMP_WriteFile(newbmp, filepath);
+	//BMP* newbmp = ImageStitching(bmp, bmp1, 100000);
+	//char filepath[100] = "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\NewStitch.bmp";
+	//BMP_WriteFile(newbmp, filepath);
+	//BMP_Free(newbmp);
+	BMP* newbmp = HarrisCornerDetector(bmp, 100000);
+	BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\HarrisSWMP1.bmp");
+	BMP_Free(newbmp);
+	newbmp = HarrisCornerDetector(bmp1, 100000);
+	BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\HarrisSWMP2.bmp");
+	BMP_Free(newbmp);
 	/////////////////////////////////////////////////////////////////////////
 	BMP_Free(bmp);
 	BMP_Free(bmp1);
@@ -169,9 +177,9 @@ BMP* downSample(BMP* bmp, int k)
 	height = BMP_GetHeight(bmp);
 	depth = BMP_GetDepth(bmp);
 	BMP* newim = BMP_Create(width / k, height / k, depth);
-	for (int i= 0; i < width/k; i++)
+	for (int i = 0; i < width / k; i++)
 	{
-		for (int j = 0; j < height/k; j++)
+		for (int j = 0; j < height / k; j++)
 		{
 			int r = 0, g = 0, b = 0;
 			BMP_GetPixelRGB(bmp, i*k, j*k, &r, &g, &b);
@@ -201,7 +209,7 @@ void reduceLevel(BMP* bmp, int level)
 }
 
 void BritandCntr(BMP* bmp, int brightness, double contrast) //Brightness: amount of RGB value you want to add
-//Contrast: | 1 means original | <1 less contrast | >1 more contrast
+															//Contrast: | 1 means original | <1 less contrast | >1 more contrast
 {
 	UINT    width, height;
 	width = BMP_GetWidth(bmp);
@@ -429,7 +437,7 @@ BMP* FastGaussianBlur(BMP* bmp, double theta, int radius)
 	return newbmp1;
 }
 
-double* GaussianKernelDouble(double* img, double theta, int radius,int width,int height)
+double* GaussianKernelDouble(double* img, double theta, int radius, int width, int height)
 {
 	double* gaussmatrix = malloc(sizeof(double)*radius*radius);
 	double sum = GaussFunction(theta, radius, gaussmatrix);
@@ -1031,8 +1039,8 @@ BMP* shearRotateShell(double degrees, BMP* bmp)
 
 BMP* SobelEdgeDetection(BMP* bmp, int thrhld, int coefficient)
 {
-	int SobelY[3][3] = { {-1,0,1},{-2,0,2},{-1,0,1} };
-	int SobelX[3][3] = { {-1,-2,-1},{0,0,0},{1,2,1} };
+	int SobelY[3][3] = { { -1,0,1 },{ -2,0,2 },{ -1,0,1 } };
+	int SobelX[3][3] = { { -1,-2,-1 },{ 0,0,0 },{ 1,2,1 } };
 	//Convert to Greyscale
 	RGBtoBW(bmp);
 	BMP_WriteFile(bmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\BW.bmp");
@@ -1301,10 +1309,10 @@ BMP* DoubleThreshold(BMP* bmp, double high, double low, int radius)
 	/*BMP* histoBMP = BMP_Create(256, (UINT)(maxHeight*1.2), depth);
 	for (int i = 0; i < 256; i++)
 	{
-		for (int j = 0; j < (UINT)(maxHeight*1.2); j++)
-		{
-			if (j <= histogram[i]) BMP_SetPixelRGB(histoBMP, i, (UINT)(maxHeight*1.2) - 1 - j, i, i, i);
-		}
+	for (int j = 0; j < (UINT)(maxHeight*1.2); j++)
+	{
+	if (j <= histogram[i]) BMP_SetPixelRGB(histoBMP, i, (UINT)(maxHeight*1.2) - 1 - j, i, i, i);
+	}
 	}
 	BMP_WriteFile(histoBMP, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\Histo.bmp");
 	BMP_Free(histoBMP);
@@ -1332,7 +1340,7 @@ BMP* DoubleThreshold(BMP* bmp, double high, double low, int radius)
 		if (minflag == 1 && maxflag == 1) break;
 	}
 	printf("totoal pixel= %d\nmax= %d\nmin= %d\n", totalPixel, maxVal, minVal); // DEBUG
-	//Double Shreshold
+																				//Double Shreshold
 	for (int i = 0; i < width; i++)
 	{
 		for (int j = 0; j < height; j++)
@@ -1360,11 +1368,11 @@ BMP* DoubleThreshold(BMP* bmp, double high, double low, int radius)
 	///////////////////////////D//E//B//U//G//////////////////////////////
 	/*for (int i = 0; i < height; i++)
 	{
-		for (int j = 0; j < width; j++)
-		{
-			printf("%3d", image[i*width + j]);
-		}
-		printf("\n");
+	for (int j = 0; j < width; j++)
+	{
+	printf("%3d", image[i*width + j]);
+	}
+	printf("\n");
 	}*/
 	//////////////////////////////////////////////////////////////////////
 	//Judge Connectivity
@@ -1403,11 +1411,11 @@ int* EgdeConnection(int* img, int width, int height, int radius)
 	/*printf("\n\n");
 	for (int i = 0; i < height; i++)
 	{
-		for (int j = 0; j < width; j++)
-		{
-			printf("%3d", img[i*width + j]);
-		}
-		printf("\n");
+	for (int j = 0; j < width; j++)
+	{
+	printf("%3d", img[i*width + j]);
+	}
+	printf("\n");
 	}*/
 	/////////////////////////////////////////////////////////////////////////
 	return img;
@@ -1649,7 +1657,7 @@ int huidu2(double row, double column, BMP* bmp)
 	for (int i = 0; i < 4; i++) {
 		e += d[i] * c[i];
 	}
-	return e/320;
+	return e / 320;
 }
 
 BMP* DINTRotation(BMP* bmp, double theta)
@@ -1692,7 +1700,7 @@ BMP* DINTRotation(BMP* bmp, double theta)
 	return newbmp;
 }
 
-descripter* HarrisCorner(BMP* bmp, double thrhld,int* poic) //poic for point count
+descripter* HarrisCorner(BMP* bmp, double thrhld, int* poic) //poic for point count
 {
 	const double Lambda = 0.2;
 	int SobelX[3][3] = { { -1,0,1 },{ -2,0,2 },{ -1,0,1 } };
@@ -1712,13 +1720,13 @@ descripter* HarrisCorner(BMP* bmp, double thrhld,int* poic) //poic for point cou
 	int* GradXY = malloc(sizeof(int)*height*width); //Product of gradient in X and Y direction
 	int* Direc = malloc(sizeof(int)*height*width); //Direction of the gradient (Rounded to eight main directions)
 	int* GradA = malloc(sizeof(int)*height*width); //Amplitude of gradient
-	memset(GradX, 0, sizeof(int)*height*width); 
-	memset(GradY, 0, sizeof(int)*height*width); 
-	memset(GradX2, 0, sizeof(int)*height*width); 
-	memset(GradY2, 0, sizeof(int)*height*width); 
-	memset(GradXY, 0, sizeof(int)*height*width); 
-	memset(Direc, -1, sizeof(int)*height*width); 
-	memset(GradA, 0, sizeof(int)*height*width); 
+	memset(GradX, 0, sizeof(int)*height*width);
+	memset(GradY, 0, sizeof(int)*height*width);
+	memset(GradX2, 0, sizeof(int)*height*width);
+	memset(GradY2, 0, sizeof(int)*height*width);
+	memset(GradXY, 0, sizeof(int)*height*width);
+	memset(Direc, -1, sizeof(int)*height*width);
+	memset(GradA, 0, sizeof(int)*height*width);
 	//BMP* Harris = BMP_Create(width, height, depth);
 	//Convolve with Sobel matrix
 	for (int i = 1; i < width - 1; i++)
@@ -1824,7 +1832,7 @@ descripter* HarrisCorner(BMP* bmp, double thrhld,int* poic) //poic for point cou
 	GradXY = NULL;
 	//Calculating response
 	double *CornerStr = malloc(sizeof(double)*width*height);
-	memset(CornerStr,0, sizeof(double)*width*height);
+	memset(CornerStr, 0, sizeof(double)*width*height);
 	for (int i = 0; i < width; i++)
 	{
 		for (int j = 0; j < height; j++)
@@ -1849,12 +1857,12 @@ descripter* HarrisCorner(BMP* bmp, double thrhld,int* poic) //poic for point cou
 
 	/*for (int i = 0; i < pointcount; i++)
 	{
-		printf("P%d: ", i + 1);
-		for (int j = 0; j < 32; j++)
-		{
-			printf("%-4.3f", EigenPoints[i].vector[j]);
-		}
-		printf("\n");
+	printf("P%d: ", i + 1);
+	for (int j = 0; j < 32; j++)
+	{
+	printf("%-4.3f", EigenPoints[i].vector[j]);
+	}
+	printf("\n");
 	}*/
 
 
@@ -1870,22 +1878,22 @@ descripter* HarrisCorner(BMP* bmp, double thrhld,int* poic) //poic for point cou
 	//Write IMG
 	/*for (int i = 0; i < width; i++)
 	{
-		for (int j = 0; j < height; j++)
-		{
-			UCHAR r, g, b;
-			BMP_GetPixelRGB(bmp, i, j, &r, &g, &b);
-			BMP_SetPixelRGB(Harris, i, j, r, g, b);
-			if (HarrisFin[i + j*width] != 0)
-			{
-				for (int ki = 0; ki < 5; ki++)
-				{
-					for (int kj = 0; kj < 5; kj++)
-					{
-						BMP_SetPixelRGB(Harris, i - 2 + ki, j - 2 + kj, 0, 255, 0);
-					}
-				}
-			}
-		}
+	for (int j = 0; j < height; j++)
+	{
+	UCHAR r, g, b;
+	BMP_GetPixelRGB(bmp, i, j, &r, &g, &b);
+	BMP_SetPixelRGB(Harris, i, j, r, g, b);
+	if (HarrisFin[i + j*width] != 0)
+	{
+	for (int ki = 0; ki < 5; ki++)
+	{
+	for (int kj = 0; kj < 5; kj++)
+	{
+	BMP_SetPixelRGB(Harris, i - 2 + ki, j - 2 + kj, 0, 255, 0);
+	}
+	}
+	}
+	}
 	}*/
 	return EigenPoints;
 }
@@ -2070,15 +2078,15 @@ BMP* HarrisCornerDetector(BMP* bmp, double thrhld)
 	return Harris;
 }
 
-BMP* AMRotationParts(BMP* bmp,int x, int y, int radius, double theta,BMP** bmpt)
+BMP* AMRotationParts(BMP* bmp, int x, int y, int radius, double theta, BMP** bmpt)
 {
 	int height = BMP_GetHeight(bmp);
 	int width = BMP_GetWidth(bmp);
 	int depth = BMP_GetDepth(bmp);
 	BMP* newbmp = BMP_Create(radius * 2, radius * 2, depth);
-	for (int i = 0; i < radius*2; i++)
+	for (int i = 0; i < radius * 2; i++)
 	{
-		for (int j = 0; j < radius*2; j++)
+		for (int j = 0; j < radius * 2; j++)
 		{
 			int r, g, b;
 			BMP_GetPixelRGB(bmp, x - radius + i, y - radius + j, &r, &g, &b);
@@ -2092,7 +2100,7 @@ BMP* AMRotationParts(BMP* bmp,int x, int y, int radius, double theta,BMP** bmpt)
 	return newbmp;
 }
 
-descripter* GenerateDescripter(int* Harris, int width, int height,int* GradY,int* GradX, BMP* bmp, int* GrA, int* point)
+descripter* GenerateDescripter(int* Harris, int width, int height, int* GradY, int* GradX, BMP* bmp, int* GrA, int* point)
 {
 	const int area = 16;
 	int PointCount = 0;
@@ -2170,12 +2178,12 @@ descripter* GenerateDescripter(int* Harris, int width, int height,int* GradY,int
 				/*BMP* tmbmp=BMP_Create(area, area, 24);
 				for (int ix = 0; ix < area; ix++)
 				{
-					for (int jy = 0; jy < area; jy++)
-					{
-						int r, g, b;
-						BMP_GetPixelRGB(tmpbmp, newx + ix - area / 2, newy + jy - area / 2, &r, &g, &b);
-						BMP_SetPixelRGB(tmbmp, ix, jy, r, g, b);
-					}
+				for (int jy = 0; jy < area; jy++)
+				{
+				int r, g, b;
+				BMP_GetPixelRGB(tmpbmp, newx + ix - area / 2, newy + jy - area / 2, &r, &g, &b);
+				BMP_SetPixelRGB(tmbmp, ix, jy, r, g, b);
+				}
 				}
 				BMP_WriteFile(tmbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\tmbm.bmp");
 				BMP_Free(tmbmp);*/
@@ -2302,7 +2310,7 @@ descripter* GenerateDescripter(int* Harris, int width, int height,int* GradY,int
 				/*printf("P%d: ", PointCount + 1);
 				for (int j = 0; j < 128; j++)
 				{
-					printf("%-6.3f", KeyPoints[PointCount].vector[j]);
+				printf("%-6.3f", KeyPoints[PointCount].vector[j]);
 				}
 				printf("\n");*/
 				//////////////////////////////////////////////////////////
@@ -2322,7 +2330,7 @@ descripter* GenerateDescripter(int* Harris, int width, int height,int* GradY,int
 	return KeyPoints;
 }
 
-pointpair* GeneratePointpair(BMP* img1, BMP* img2, double thrhld,int *paircount)
+pointpair* GeneratePointpair(BMP* img1, BMP* img2, double thrhld, int *paircount)
 {
 	int img1count, img2count;
 	int flipped = 0;
@@ -2367,7 +2375,7 @@ pointpair* GeneratePointpair(BMP* img1, BMP* img2, double thrhld,int *paircount)
 				}
 			}
 		}
-		if (mindist/semindist <=POINTPAIR_THRHLD)
+		if (mindist / semindist <= POINTPAIR_THRHLD)
 		{
 			flagimg2[minj] = 1;
 			if (flipped == 0)
@@ -2402,7 +2410,7 @@ BMP* ImageComparing(BMP* img1, BMP* img2, double thrhld)
 	int depth = BMP_GetDepth(img1);
 	int paircount = 0;
 	affinematrix transform;
-	pointpair* points = RANSACMatch(img1, img2, thrhld, &paircount,&transform);
+	pointpair* points = RANSACMatch(img1, img2, thrhld, &paircount, &transform);
 	//pointpair* points = GeneratePointpair(img1, img2, thrhld, &paircount);
 	BMP* newbmp = BMP_Create(wid1 + wid2, max(hei1, hei2), depth);
 	//Draw img1
@@ -2410,18 +2418,18 @@ BMP* ImageComparing(BMP* img1, BMP* img2, double thrhld)
 	{
 		for (int j = 0; j < hei1; j++)
 		{
-			UCHAR r=0, g=0, b=0;
+			UCHAR r = 0, g = 0, b = 0;
 			BMP_GetPixelRGB(img1, i, j, &r, &g, &b);
 			BMP_SetPixelRGB(newbmp, i, j, r, g, b);
 		}
 	}
 	//Draw img2
-	for (int i = wid1; i < wid1+wid2; i++)
+	for (int i = wid1; i < wid1 + wid2; i++)
 	{
 		for (int j = 0; j < hei2; j++)
 		{
 			UCHAR r = 0, g = 0, b = 0;
-			BMP_GetPixelRGB(img2, i-wid1, j, &r, &g, &b);
+			BMP_GetPixelRGB(img2, i - wid1, j, &r, &g, &b);
 			BMP_SetPixelRGB(newbmp, i, j, r, g, b);
 		}
 	}
@@ -2441,7 +2449,7 @@ void DrawLine(BMP* bmp, int inix, int iniy, int desx, int desy, int r, int g, in
 	int dire = -1;
 	if (desx > inix) dire = 1;
 	double y = iniy;
-	for (int i = inix;i <=desx; i+=dire)
+	for (int i = inix; i <= desx; i += dire)
 	{
 		BMP_SetPixelRGB(bmp, i, (int)y, r, g, b);
 		y += disy;
@@ -2462,7 +2470,7 @@ int* NonMaximumSpr(double* img, int width, int height, int windowSize)
 {
 	int *ans = malloc(sizeof(int)*width*height);
 	memset(ans, 0, sizeof(int)*width*height);
-	for (int i = 0; i < width/windowSize; i++)
+	for (int i = 0; i < width / windowSize; i++)
 	{
 		for (int j = 0; j < height / windowSize; j++)
 		{
@@ -2519,7 +2527,7 @@ int matchjudgement(affinematrix matrix, pointpair*naivepair, int paircount, int*
 	return result;
 }
 
-point affineTransform(point a,affinematrix matrix)
+point affineTransform(point a, affinematrix matrix)
 {
 	point p;
 	//Affine Transformation;
@@ -2533,7 +2541,7 @@ point homographicTransform(point a, homographicmatrix matrix)
 	point p;
 	//homographic Transformation;
 	double var = matrix.H31*a.x + matrix.H32*a.y + 1;
-	p.x = ((matrix.H11)*(a.x) + (matrix.H12)*(a.y) + matrix.H13)/var;
+	p.x = ((matrix.H11)*(a.x) + (matrix.H12)*(a.y) + matrix.H13) / var;
 	p.y = (matrix.H21*a.x + matrix.H22*a.y + matrix.H23) / var;
 	return p;
 }
@@ -2616,7 +2624,7 @@ affinematrix RANSACAffm(BMP* img1, BMP* img2, double thrhld)
 	return result;
 }
 
-pointpair* RANSACMatch(BMP* img1, BMP* img2, double thrhld, int* RANSACcount,affinematrix* matrix)
+pointpair* RANSACMatch(BMP* img1, BMP* img2, double thrhld, int* RANSACcount, affinematrix* matrix)
 {
 	affinematrix best_affm;
 	best_affm.A1 = 0;
@@ -2705,7 +2713,7 @@ pointpair* RANSACMatch(BMP* img1, BMP* img2, double thrhld, int* RANSACcount,aff
 	return Matchedpairs;
 }
 
-int maximumint(int a, int b, int c, int d,int e)
+int maximumint(int a, int b, int c, int d, int e)
 {
 	int par = a;
 	int var[4] = { b,c,d,e };
@@ -2731,13 +2739,35 @@ BMP* ImageStitching(BMP* bmp1, BMP* bmp2, double thrhld)
 	int hei2 = BMP_GetHeight(bmp2);
 	int depth = BMP_GetDepth(bmp1);
 	int paircount = 0;
+	BMP* backbmp1 = BMP_Create(wid1, hei1, depth);
+	//Copy BMP1
+	for (int i = 0; i < wid1; i++)
+	{
+		for (int j = 0; j < hei1; j++)
+		{
+			int r = 0, g = 0, b = 0;
+			BMP_GetPixelRGB(bmp1, i, j, &r, &g, &b);
+			BMP_SetPixelRGB(backbmp1, i, j, r, g, b);
+		}
+	}
+	BMP* backbmp2 = BMP_Create(wid2, hei2, depth);
+	//Copy BMP2
+	for (int i = 0; i < wid2; i++)
+	{
+		for (int j = 0; j < hei2; j++)
+		{
+			int r = 0, g = 0, b = 0;
+			BMP_GetPixelRGB(bmp2, i, j, &r, &g, &b);
+			BMP_SetPixelRGB(backbmp2, i, j, r, g, b);
+		}
+	}
 	homographicmatrix transform;
 	int count;
 	pointpair* points = RANSACHomo_match(bmp1, bmp2, thrhld, &count, &transform);
 	//Transform Boundary
 	point zero_zero_tr = { 0,0 }, width_zero_tr = { wid1,0 }, zero_height_tr = { 0,hei1 }, width_height_tr = { wid1,hei1 };
 	zero_zero_tr = homographicTransform(zero_zero_tr, transform);
-	width_zero_tr =homographicTransform(width_zero_tr, transform);
+	width_zero_tr = homographicTransform(width_zero_tr, transform);
 	zero_height_tr = homographicTransform(zero_height_tr, transform);
 	width_height_tr = homographicTransform(width_height_tr, transform);
 	//Calculate Boundary
@@ -2748,40 +2778,52 @@ BMP* ImageStitching(BMP* bmp1, BMP* bmp2, double thrhld)
 	int newwid = maxx - minx;
 	int newhei = maxy - miny;
 	//Create New Image
-	BMP* newimg=BMP_Create(newwid, newhei, depth);
+	BMP* newimg = BMP_Create(newwid, newhei, depth);
 	//Transform img1
 	int img1x0 = (int)minimum(zero_zero_tr.x, width_zero_tr.x, width_height_tr.x, zero_height_tr.x) - minx;
 	int img1wid = (int)maximum(zero_zero_tr.x, width_zero_tr.x, width_height_tr.x, zero_height_tr.x) - minx - img1x0;
 	int img1y0 = (int)minimum(zero_zero_tr.y, width_zero_tr.y, width_height_tr.y, zero_height_tr.y) - miny;
 	int img1hei = (int)maximum(zero_zero_tr.y, width_zero_tr.y, width_height_tr.y, zero_height_tr.y) - miny - img1y0;
-	int* img1 = malloc((img1hei+1)*(img1wid+1) * sizeof(int));
+	int* img1_r = malloc((img1hei + 1)*(img1wid + 1) * sizeof(int));
+	int* img1_g = malloc((img1hei + 1)*(img1wid + 1) * sizeof(int));
+	int* img1_b = malloc((img1hei + 1)*(img1wid + 1) * sizeof(int));
 	///////////////////////////////
 	BMP* imgbmp1 = BMP_Create(img1wid, img1hei, depth);
 	///////////////////////////////
-	memset(img1, -1, img1hei*img1wid * sizeof(int));
-	for (int i = 0; i < wid1; i++)
+	memset(img1_r, -1, img1hei*img1wid * sizeof(int));
+	memset(img1_g, -1, img1hei*img1wid * sizeof(int));
+	memset(img1_b, -1, img1hei*img1wid * sizeof(int));
+	for (int i = 0; i < img1wid; i++)
 	{
-		for (int j = 0; j < hei1; j++)
+		for (int j = 0; j < img1hei; j++)
 		{
-			point a = { i,j };
-			point p = homographicTransform(a, transform);
-			int x = p.x - (int)minimum(zero_zero_tr.x, width_zero_tr.x, width_height_tr.x, zero_height_tr.x);
-			int y = p.y - (int)minimum(zero_zero_tr.y, width_zero_tr.y, width_height_tr.y, zero_height_tr.y);
-			int r=0, g=0, b=0;
-			BMP_GetPixelRGB(bmp1, i, j, &r, &g, &b);
-			BMP_SetPixelRGB(imgbmp1, x, y, r, g, b);
-			if (x + y*img1wid >= 0 && x + y*img1wid < img1wid*img1hei)	img1[x + y*img1wid] = r;
+			double r = 0, g = 0, b = 0;
+			if (judge_edge(bmp1, transform, i, j, img1wid, img1hei) == 1)
+			{
+				int i1 = i + (int)minimum(zero_zero_tr.x, width_zero_tr.x, width_height_tr.x, zero_height_tr.x);
+				int j1 = j + (int)minimum(zero_zero_tr.y, width_zero_tr.y, width_height_tr.y, zero_height_tr.y);
+				AreaInterpolation(transform, backbmp1, i1, j1, &r, &g, &b);
+				BMP_SetPixelRGB(imgbmp1, i, j, r, g, b);
+				if (i + j*img1wid >= 0 && i + j*img1wid < img1wid*img1hei)
+				{
+					img1_r[i + j*img1wid] = r;
+					img1_g[i + j*img1wid] = g;
+					img1_b[i + j*img1wid] = b;
+				}
+			}
+			else
+				BMP_SetPixelRGB(imgbmp1, i, j, (UCHAR)r, (UCHAR)g, (UCHAR)b);
 		}
 	}
 	//////////////////////////////////////
 	printf("Writing img1.bmp ...\n");
-	BMP_WriteFile(imgbmp1, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\whattt.bmp");
-	BMP_Free(imgbmp1);
+	BMP_WriteFile(imgbmp1, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\IMG1.bmp");
 	//////////////////////////////////////
 	//Transform img2
 	int img2x0 = -minx, img2y0 = -miny;
 	//BLEND
-	ImageBlending(img1, bmp2, img1wid, img1hei, img1x0, img1y0, img2x0, img2y0, newimg);
+	ImageBlending_rgb(backbmp1, imgbmp1, backbmp2, img1x0, img1y0, img2x0, img2y0, newimg, transform, img1wid, img1hei);
+	BMP_Free(imgbmp1);
 	///////////////////////////////////////////////////////////////////////////////////
 	BMP* newbmp = BMP_Create(wid1 + wid2, max(hei1, hei2), depth);
 	//Draw img1
@@ -2789,7 +2831,7 @@ BMP* ImageStitching(BMP* bmp1, BMP* bmp2, double thrhld)
 	{
 		for (int j = 0; j < hei1; j++)
 		{
-			UCHAR r = 0, g = 0, b = 0;
+			int r = 0, g = 0, b = 0;
 			BMP_GetPixelRGB(bmp1, i, j, &r, &g, &b);
 			BMP_SetPixelRGB(newbmp, i, j, r, g, b);
 		}
@@ -2799,7 +2841,7 @@ BMP* ImageStitching(BMP* bmp1, BMP* bmp2, double thrhld)
 	{
 		for (int j = 0; j < hei2; j++)
 		{
-			UCHAR r = 0, g = 0, b = 0;
+			int r = 0, g = 0, b = 0;
 			BMP_GetPixelRGB(bmp2, i - wid1, j, &r, &g, &b);
 			BMP_SetPixelRGB(newbmp, i, j, r, g, b);
 		}
@@ -2810,11 +2852,13 @@ BMP* ImageStitching(BMP* bmp1, BMP* bmp2, double thrhld)
 		DrawLine(newbmp, (points[i].p1).x, (points[i].p1).y, (points[i].p2).x + wid1, (points[i].p2).y, 0, 255, 0);
 	}
 	printf("Writing Compare.bmp ...\n");
-	BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\Compare.bmp");
+	BMP_WriteFile(newbmp, "C:\\Users\\HP\\Documents\\Visual Studio 2015\\Projects\\ImageProcessing\\Debug\\Tst\\DOWS\\COMP.bmp");
 	//Free
 	free(points);
 	BMP_Free(newbmp);
-	free(img1);
+	free(img1_r);
+	free(img1_g);
+	free(img1_b);
 	/////////////////////////////////////////////////////////////////////////////////////////////
 	return newimg;
 }
@@ -2933,11 +2977,11 @@ double GaussianElimination_determinant(double**matrix, int size)
 		///////////////////////////////////////////////////////
 		/*for (int i = 0; i < 8; i++)
 		{
-			for (int j = 0; j < 8; j++)
-			{
-				printf("%16.4f", matrix[i][j]);
-			}
-			printf("\n\n");
+		for (int j = 0; j < 8; j++)
+		{
+		printf("%16.4f", matrix[i][j]);
+		}
+		printf("\n\n");
 		}
 		printf("\n\n");*/
 		//////////////////////////////////////////////////////
@@ -3174,7 +3218,7 @@ homographicmatrix RANSACHomo(BMP* img1, BMP* img2, double thrhld)
 }
 
 
-pointpair* RANSACHomo_match(BMP* img1, BMP* img2, double thrhld, int* RANSACcount,homographicmatrix* transform)
+pointpair* RANSACHomo_match(BMP* img1, BMP* img2, double thrhld, int* RANSACcount, homographicmatrix* transform)
 {
 	homographicmatrix best;
 	best.H11 = 0;
@@ -3322,7 +3366,7 @@ pointpair* RANSACHomo_match(BMP* img1, BMP* img2, double thrhld, int* RANSACcoun
 			free(tmp_mat);
 
 			/*for (int var = 0; var < 8; var++)//Back!
-				com_mat[var][k] = mid[var];*/
+			com_mat[var][k] = mid[var];*/
 
 		}
 
@@ -3434,7 +3478,7 @@ BMP* ImageBlending(int* img1, BMP* img2, int img1wid, int img1hei, int img1x0, i
 	{
 		for (int j = 0; j < reghei; j++)
 		{
-			int r=0, g=0, b=0;
+			int r = 0, g = 0, b = 0;
 			BMP_GetPixelRGB(img2, regx0 - img2x0 + i, regy0 - img2y0 + j, &r, &g, &b);
 			img2part[i + j*regwid] = r;
 		}
@@ -3451,42 +3495,42 @@ BMP* ImageBlending(int* img1, BMP* img2, int img1wid, int img1hei, int img1x0, i
 	memset(blendhigh, -1, sizeof(int)*reghei*regwid);
 	for (int i = 0; i < regwid; i++)
 	{
-		for (int j = 0; j < reghei; j++)
-		{
-			int intensity1 = img1high[i + j*regwid];
-			int intensity2 = img2high[i + j*regwid];
-			blendhigh[i + j*regwid] = (intensity1 + intensity2) / 2;//binary blending
-		}
+	for (int j = 0; j < reghei; j++)
+	{
+	int intensity1 = img1high[i + j*regwid];
+	int intensity2 = img2high[i + j*regwid];
+	blendhigh[i + j*regwid] = (intensity1 + intensity2) / 2;//binary blending
+	}
 	}
 	//Blending Low frequency
 	int* blendlow = malloc(sizeof(int)*reghei*regwid);
 	for (int i = 0; i < regwid; i++)
 	{
-		double img1weight = 1 - (1.0*i / regwid);
-		double img2weight = 1.0*i / regwid;
-		for (int j = 0; j < reghei; j++)
-		{
-			int flag = img1part[i + j*regwid];
-			int i1 = img1low[i + j*regwid];
-			int i2 = img2low[i + j*regwid];
-			if (flag >= 0)	blendlow[i + j*regwid] = i1*img1weight + i2*img2weight; //Linear blending
-			else
-			{
-				blendlow[i + j*regwid] = i2;
-			}
-		}
+	double img1weight = 1 - (1.0*i / regwid);
+	double img2weight = 1.0*i / regwid;
+	for (int j = 0; j < reghei; j++)
+	{
+	int flag = img1part[i + j*regwid];
+	int i1 = img1low[i + j*regwid];
+	int i2 = img2low[i + j*regwid];
+	if (flag >= 0)	blendlow[i + j*regwid] = i1*img1weight + i2*img2weight; //Linear blending
+	else
+	{
+	blendlow[i + j*regwid] = i2;
+	}
+	}
 	}*/
 	/*
 	//Reconstruct
 	int* blendreg = malloc(sizeof(int)*reghei*regwid);
 	for (int i = 0; i < regwid; i++)
 	{
-		for (int j = 0; j < reghei; j++)
-		{
-			int i1 = blendhigh[i + j*regwid];
-			int i2 = blendlow[i + j*regwid];
-			blendreg[i + j*regwid] = blendhigh[i + j*regwid] + blendlow[i + j*regwid];
-		}
+	for (int j = 0; j < reghei; j++)
+	{
+	int i1 = blendhigh[i + j*regwid];
+	int i2 = blendlow[i + j*regwid];
+	blendreg[i + j*regwid] = blendhigh[i + j*regwid] + blendlow[i + j*regwid];
+	}
 	}
 	*/
 	//Reconstruct
@@ -3530,7 +3574,7 @@ BMP* ImageBlending(int* img1, BMP* img2, int img1wid, int img1hei, int img1x0, i
 					if (i >= img2x0&&i < (img2x0 + img2wid) && j >= img2y0&&j < (img2y0 + img2hei)) // if in img2
 					{
 						int r1 = 0, g1 = 0, b1 = 0;
-						BMP_GetPixelRGB(img2, i-img2x0, j-img2y0, &r1, &g1, &b1);
+						BMP_GetPixelRGB(img2, i - img2x0, j - img2y0, &r1, &g1, &b1);
 						BMP_SetPixelRGB(newimg, i, j, r1, g1, b1);
 					}
 				}
@@ -3549,7 +3593,7 @@ BMP* ImageBlending(int* img1, BMP* img2, int img1wid, int img1hei, int img1x0, i
 	free(blendreg);
 }
 
-void* SeparateFrequency(int* img, int radius,int hei,int wid,int** highfre,int** lowfre) //DO NOT MALLOC HIGHFRE AND LOWFRE
+void* SeparateFrequency(int* img, int radius, int hei, int wid, int** highfre, int** lowfre) //DO NOT MALLOC HIGHFRE AND LOWFRE
 {
 	(*highfre) = malloc(sizeof(int)*hei*wid);
 	memset(*highfre, 0, sizeof(int)*hei*wid);
@@ -3566,4 +3610,234 @@ void* SeparateFrequency(int* img, int radius,int hei,int wid,int** highfre,int**
 		}
 	}
 
+}
+
+void AreaInterpolation(homographicmatrix matrix, BMP* img1, int x, int y, double* R, double* G, double* B)
+{
+	//Determinant 3*3;
+	double determ_of_matrix = matrix.H11*matrix.H22 + matrix.H12*matrix.H23*matrix.H31 + matrix.H21*matrix.H32*matrix.H13 - matrix.H13*matrix.H22*matrix.H31 - matrix.H32*matrix.H23*matrix.H11 - matrix.H12*matrix.H21;
+	double inverse_matrix[3][3];
+	//Adjugate matrix...
+	inverse_matrix[0][0] = (matrix.H22 - matrix.H23*matrix.H32) / determ_of_matrix;
+	inverse_matrix[1][0] = -(matrix.H21 - matrix.H23*matrix.H31) / determ_of_matrix;
+	inverse_matrix[2][0] = (matrix.H21*matrix.H32 - matrix.H22*matrix.H31) / determ_of_matrix;
+	inverse_matrix[0][1] = -(matrix.H12 - matrix.H32*matrix.H13) / determ_of_matrix;
+	inverse_matrix[1][1] = (matrix.H11 - matrix.H13*matrix.H31) / determ_of_matrix;
+	inverse_matrix[2][1] = -(matrix.H11*matrix.H32 - matrix.H12*matrix.H31) / determ_of_matrix;
+	inverse_matrix[0][2] = (matrix.H12*matrix.H23 - matrix.H22*matrix.H13) / determ_of_matrix;
+	inverse_matrix[1][2] = -(matrix.H11*matrix.H23 - matrix.H13*matrix.H21) / determ_of_matrix;
+	inverse_matrix[2][2] = (matrix.H11*matrix.H22 - matrix.H12*matrix.H21) / determ_of_matrix;
+
+	//First mapping...
+	/*double homo_z = (matrix.H31*x + matrix.H32*y + 1);
+	*homo_x = (int)((matrix.H11*x + matrix.H12*y + matrix.H13) / homo_z);
+	*homo_y = (int)((matrix.H21*x + matrix.H22*y + matrix.H23) / homo_z);
+	int var1 = (int)((matrix.H11*x + matrix.H12*y + matrix.H13));
+	int var2 = (int)((matrix.H21*x + matrix.H22*y + matrix.H23));*/
+
+	double coefficient = (inverse_matrix[2][0] * x + inverse_matrix[2][1] * y + inverse_matrix[2][2]);
+	//Second re-mapping;
+	double interpolate_x = (inverse_matrix[0][0] * x + inverse_matrix[0][1] * y + inverse_matrix[0][2]) / coefficient;
+	double interpolate_y = (inverse_matrix[1][0] * x + inverse_matrix[1][1] * y + inverse_matrix[1][2]) / coefficient;
+
+	//Get color value of 4 coners;
+	UCHAR pre_r[4];
+	UCHAR pre_g[4];
+	UCHAR pre_b[4];
+	BMP_GetPixelRGB(img1, (unsigned long)interpolate_x, (unsigned long)interpolate_y, pre_r, pre_g, pre_b);//LU
+	BMP_GetPixelRGB(img1, (unsigned long)interpolate_x + 1, (unsigned long)interpolate_y, pre_r + 1, pre_g + 1, pre_b + 1);//RU
+	BMP_GetPixelRGB(img1, (unsigned long)interpolate_x, (unsigned long)interpolate_y + 1, pre_r + 2, pre_g + 2, pre_b + 2);//LB
+	BMP_GetPixelRGB(img1, (unsigned long)interpolate_x + 1, (unsigned long)interpolate_y + 1, pre_r + 3, pre_g + 3, pre_b + 3);//RB
+
+	*R = (1 - interpolate_x + (unsigned long)interpolate_x)*(1 - interpolate_y + (unsigned long)interpolate_y)*pre_r[0] + (interpolate_x - (unsigned long)interpolate_x)*(1 - interpolate_y + (unsigned long)interpolate_y)*pre_r[1] + (1 - interpolate_x + (unsigned long)interpolate_x)*(interpolate_y - (unsigned long)interpolate_y)*pre_r[2] + (interpolate_x - (unsigned long)interpolate_x)*(interpolate_y - (unsigned long)interpolate_y)*pre_r[3];
+	*G = (1 - interpolate_x + (unsigned long)interpolate_x)*(1 - interpolate_y + (unsigned long)interpolate_y)*pre_g[0] + (interpolate_x - (unsigned long)interpolate_x)*(1 - interpolate_y + (unsigned long)interpolate_y)*pre_g[1] + (1 - interpolate_x + (unsigned long)interpolate_x)*(interpolate_y - (unsigned long)interpolate_y)*pre_g[2] + (interpolate_x - (unsigned long)interpolate_x)*(interpolate_y - (unsigned long)interpolate_y)*pre_g[3];
+	*B = (1 - interpolate_x + (unsigned long)interpolate_x)*(1 - interpolate_y + (unsigned long)interpolate_y)*pre_b[0] + (interpolate_x - (unsigned long)interpolate_x)*(1 - interpolate_y + (unsigned long)interpolate_y)*pre_b[1] + (1 - interpolate_x + (unsigned long)interpolate_x)*(interpolate_y - (unsigned long)interpolate_y)*pre_b[2] + (interpolate_x - (unsigned long)interpolate_x)*(interpolate_y - (unsigned long)interpolate_y)*pre_b[3];
+
+}
+
+int judge_edge(BMP* img, homographicmatrix matrix, int x, int y, int img1wid, int img1hei)
+{
+	double pre_width = BMP_GetWidth(img);
+	double pre_height = BMP_GetHeight(img);
+	//Coorsinate transformation;
+	point LL, RL, LU, RU;
+	LL.x = 0;
+	LL.y = 0;
+	RL.x = pre_width;
+	RL.y = 0;
+	LU.x = 0;
+	LU.y = pre_height;
+	RU.x = pre_width;
+	RU.y = pre_height;
+	LL = homographicTransform(LL, matrix);
+	RL = homographicTransform(RL, matrix);
+	LU = homographicTransform(LU, matrix);
+	RU = homographicTransform(RU, matrix);
+	double min_x = minimum(LL.x, RL.x, LU.x, RU.x);
+	double min_y = minimum(LL.y, RL.y, LU.y, RU.y);
+
+	//Transformation of testing point;
+	point test_p;
+	test_p.x = x + min_x;
+	test_p.y = y + min_y;
+
+	//Determinant 3*3;
+	double determ_of_matrix = matrix.H11*matrix.H22 + matrix.H12*matrix.H23*matrix.H31 + matrix.H21*matrix.H32*matrix.H13 - matrix.H13*matrix.H22*matrix.H31 - matrix.H32*matrix.H23*matrix.H11 - matrix.H12*matrix.H21;
+	double inverse_matrix[3][3];
+	//Adjugate matrix...
+	inverse_matrix[0][0] = (matrix.H22 - matrix.H23*matrix.H32) / determ_of_matrix;
+	inverse_matrix[1][0] = -(matrix.H21 - matrix.H23*matrix.H31) / determ_of_matrix;
+	inverse_matrix[2][0] = (matrix.H21*matrix.H32 - matrix.H22*matrix.H31) / determ_of_matrix;
+	inverse_matrix[0][1] = -(matrix.H12 - matrix.H32*matrix.H13) / determ_of_matrix;
+	inverse_matrix[1][1] = (matrix.H11 - matrix.H13*matrix.H31) / determ_of_matrix;
+	inverse_matrix[2][1] = -(matrix.H11*matrix.H32 - matrix.H12*matrix.H31) / determ_of_matrix;
+	inverse_matrix[0][2] = (matrix.H12*matrix.H23 - matrix.H22*matrix.H13) / determ_of_matrix;
+	inverse_matrix[1][2] = -(matrix.H11*matrix.H23 - matrix.H13*matrix.H21) / determ_of_matrix;
+	inverse_matrix[2][2] = (matrix.H11*matrix.H22 - matrix.H12*matrix.H21) / determ_of_matrix;
+
+	double remap_x = inverse_matrix[0][0] * test_p.x + inverse_matrix[0][1] * test_p.y + inverse_matrix[0][2];
+	double remap_y = inverse_matrix[1][0] * test_p.x + inverse_matrix[1][1] * test_p.y + inverse_matrix[1][2];
+	remap_x /= inverse_matrix[2][0] * test_p.x + inverse_matrix[2][1] * test_p.y + inverse_matrix[2][2];
+	remap_y /= inverse_matrix[2][0] * test_p.x + inverse_matrix[2][1] * test_p.y + inverse_matrix[2][2];
+
+	if (remap_x >= 0 && remap_x <= pre_width && remap_y >= 0 && remap_y <= pre_height)
+		return 1;
+	else
+		return 0;
+}
+
+BMP* ImageBlending_rgb(BMP* Originalbmp, BMP* img1, BMP* img2, int img1x0, int img1y0, int img2x0, int img2y0, BMP* newimg, homographicmatrix mat)
+{
+
+	int img1wid = BMP_GetWidth(img1);
+	int img1hei = BMP_GetHeight(img1);
+	int img2wid = BMP_GetWidth(img2);
+	int img2hei = BMP_GetHeight(img2);
+	int depth = BMP_GetDepth(img2);
+	int regx0 = max(img1x0, img2x0);
+	int regwid = min(img1x0 + img1wid, img2x0 + img2wid) - regx0;
+	int regy0 = max(img1y0, img2y0);
+	int reghei = min(img1y0 + img1hei, img2y0 + img2hei) - regy0;
+	//Create the overlap part of img1
+	double* img1part_r = malloc(regwid*reghei * sizeof(double));
+	double* img1part_g = malloc(regwid*reghei * sizeof(double));
+	double* img1part_b = malloc(regwid*reghei * sizeof(double));
+	memset(img1part_r, -1, sizeof(int)*regwid*reghei); // -1 means transparent
+	memset(img1part_g, -1, sizeof(int)*regwid*reghei);
+	memset(img1part_b, -1, sizeof(int)*regwid*reghei);
+	for (int i = 0; i < regwid; i++)
+	{
+		for (int j = 0; j < reghei; j++)
+		{
+			UCHAR r = 0;
+			UCHAR g = 0;
+			UCHAR b = 0;
+			point p = { 0,0 };
+			if (judge_edge(Originalbmp, mat, i + regx0 - img1x0, j + regy0 - img1y0, img1wid, img1hei) == 1)
+			{
+				BMP_GetPixelRGB(img1, i + regx0 - img1x0, j + regy0 - img1y0, &r, &g, &b);
+				img1part_r[i + j*regwid] = r;
+				img1part_g[i + j*regwid] = g;
+				img1part_b[i + j*regwid] = b;
+			}
+		}
+	}
+	//Create the overlap part of img2
+	int* img2part_r = malloc(regwid*reghei * sizeof(int));
+	int* img2part_g = malloc(regwid*reghei * sizeof(int));
+	int* img2part_b = malloc(regwid*reghei * sizeof(int));
+	for (int i = 0; i < regwid; i++)
+	{
+		for (int j = 0; j < reghei; j++)
+		{
+			UCHAR r = 0, g = 0, b = 0;
+			BMP_GetPixelRGB(img2, regx0 - img2x0 + i, regy0 - img2y0 + j, &r, &g, &b);
+			img2part_r[i + j*regwid] = r;
+			img2part_g[i + j*regwid] = g;
+			img2part_b[i + j*regwid] = b;
+		}
+	}
+
+	//Reconstruct
+	int* blendreg_r = malloc(sizeof(int)*reghei*regwid);
+	int* blendreg_g = malloc(sizeof(int)*reghei*regwid);
+	int* blendreg_b = malloc(sizeof(int)*reghei*regwid);
+	for (int i = 0; i < regwid; i++)
+	{
+		double img1weight = 1 - (1.0*i / regwid);
+		double img2weight = 1.0*i / regwid;
+		for (int j = 0; j < reghei; j++)
+		{
+			//R;
+			int i1 = img1part_r[i + j *regwid];
+			int i2 = img2part_r[i + j*regwid];
+			if (i1 >= 0)	blendreg_r[i + j*regwid] = i1*img1weight + i2*img2weight; //Linear blending
+			else
+				blendreg_r[i + j*regwid] = i2;
+			//G;
+			i1 = img1part_g[i + j*regwid];
+			i2 = img2part_g[i + j*regwid];
+			if (i1 >= 0)	blendreg_g[i + j*regwid] = i1*img1weight + i2*img2weight; //Linear blending
+			else
+				blendreg_g[i + j*regwid] = i2;
+			//B;
+			i1 = img1part_b[i + j*regwid];
+			i2 = img2part_b[i + j*regwid];
+			if (i1 >= 0)	blendreg_b[i + j*regwid] = i1*img1weight + i2*img2weight; //Linear blending
+			else
+				blendreg_b[i + j*regwid] = i2;
+		}
+	}
+	//Write Newimg
+	int newwid = BMP_GetWidth(newimg);
+	int newhei = BMP_GetHeight(newimg);
+	for (int i = 0; i < newwid; i++)
+	{
+		for (int j = 0; j < newhei; j++)
+		{
+			if (i >= regx0&&i < (regx0 + regwid) && j >= regy0&&j < (regy0 + reghei)) // if in overlap region
+			{
+				UCHAR i1 = blendreg_r[(i - regx0) + (j - regy0)*regwid];
+				UCHAR i2 = blendreg_g[(i - regx0) + (j - regy0)*regwid];
+				UCHAR i3 = blendreg_b[(i - regx0) + (j - regy0)*regwid];
+				BMP_SetPixelRGB(newimg, (i), (j), i1, i2, i3);
+			}
+			else
+			{
+				if (i >= img1x0&&i < (img1x0 + img1wid) && j >= img1y0&&j < (img1y0 + img1hei)) // if in img1
+				{
+					UCHAR i1 = 0;
+					UCHAR i2 = 0;
+					UCHAR i3 = 0;
+					BMP_GetPixelRGB(img1, i-img1x0, j-img1y0, &i1, &i2, &i3);
+					BMP_SetPixelRGB(newimg, i, j, i1, i2, i3);
+				}
+				else
+				{
+					if (i >= img2x0&&i < (img2x0 + img2wid) && j >= img2y0&&j < (img2y0 + img2hei)) // if in img2
+					{
+						UCHAR r1 = 0, g1 = 0, b1 = 0;
+						BMP_GetPixelRGB(img2, i - img2x0, j - img2y0, &r1, &g1, &b1);
+						BMP_SetPixelRGB(newimg, i, j, r1, g1, b1);
+					}
+				}
+			}
+		}
+	}
+	//Freeeeeeee!!!
+	free(img1part_r);
+	free(img1part_g);
+	free(img1part_b);
+	free(img2part_r);
+	free(img2part_g);
+	free(img2part_b);
+	/*free(img1high);
+	free(img1low);
+	free(img2high);
+	free(img2low);
+	free(blendhigh);
+	free(blendlow);*/
+	free(blendreg_r);
+	free(blendreg_g);
+	free(blendreg_b);
 }
